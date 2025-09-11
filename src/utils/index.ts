@@ -65,9 +65,6 @@ export function getAttributeInfoAtPosition(
 ): { attrName: string; tagName: string; isEvent: boolean; isDynamic: boolean } | null {
 
   /* ---------- 1. 找到标签开始、结束位置（跨行） ---------- */
-  const startTagOpen = document.positionAt(
-    document.offsetAt(position) - document.offsetAt(position)   // 从 0 到光标
-  );
   let openAngle = -1;
   // 向前找最近的 <
   for (let line = position.line; line >= 0; line--) {

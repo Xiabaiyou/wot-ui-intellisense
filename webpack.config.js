@@ -45,7 +45,7 @@ const extensionConfig = {
     // 使用 CopyWebpackPlugin 复制 src/component 目录下的所有 .md 文件到 dist/component 目录
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'src/component/*.md', to: 'component/[name][ext]' }
+        { from: 'src/component/*.md', to: 'src/component/[name][ext]' }
       ] 
     })
   ], 

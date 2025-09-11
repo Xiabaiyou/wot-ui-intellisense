@@ -39,6 +39,122 @@ interface ComponentInfo {
 }
 
 /**
+ * 处理组件属性，特别是v-model相关属性
+ * @param prop 原始属性数据
+ * @returns 处理后的属性数组
+ */
+function processComponentProp(prop: string[]): Array<{
+  name: string;
+  type: string;
+  values?: string[];
+  description: string;
+  default?: string;
+  version?: string;
+}> {
+  // 解析属性类型
+  let type: string = prop[2]?.toLowerCase() || "string";
+  let values: string[] | undefined;
+
+  // 如果类型是枚举类型，解析可选值
+  if (
+    type === "string" &&
+    prop[3] &&
+    prop[3] !== "-" &&
+    prop[3].includes("/")
+  ) {
+    values = prop[3]
+      .split("/")
+      .map((v) => v.trim())
+      .filter((v) => v !== "-");
+    if (values.length > 0) {
+      type = "enum";
+    }
+  }
+
+  // 特殊处理scope属性，它有明确的类型ButtonScope
+  if (prop[0] === "scope") {
+    type = "enum";
+    values = ["phoneNumber", "userInfo"];
+  }
+
+  const result: Array<{
+    name: string;
+    type: string;
+    values?: string[];
+    description: string;
+    default?: string;
+    version?: string;
+  }> = [];
+
+  // 处理复合属性名，如 'v-model / modelValue' 或 'modelValue / v-model' 等
+  const propNames = prop[0].split('/').map(name => name.trim().replace(/`/g, ''));
+  const normalizedNames = propNames.map(name => {
+    // 标准化属性名，移除反引号
+    return name.replace(/`/g, '');
+  });
+  
+  // 添加所有属性名作为独立属性
+  normalizedNames.forEach((name, index) => {
+    result.push({
+      name: name,
+      type,
+      values,
+      description: index === 0 ? (prop[1] || "") : `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+      default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
+      version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
+    });
+  });
+
+  // 检查是否包含v-model相关属性名
+  const hasVModel = normalizedNames.some(name => 
+    name === "v-model" || name === "modelValue" || name === "model-value"
+  );
+
+  // 如果包含v-model相关属性，确保三种形式都存在
+  if (hasVModel) {
+    const existingNames = new Set(normalizedNames);
+    
+    // 确保 v-model 存在
+    if (!existingNames.has("v-model")) {
+      result.push({
+        name: "v-model",
+        type,
+        values,
+        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+        default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
+        version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
+      });
+    }
+    
+    // 确保 model-value 存在
+    if (!existingNames.has("model-value")) {
+      result.push({
+        name: "model-value",
+        type,
+        values,
+        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+        default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
+        version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
+      });
+    }
+    
+    // 确保 modelValue 存在
+    if (!existingNames.has("modelValue")) {
+      result.push({
+        name: "modelValue",
+        type,
+        values,
+        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+        default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
+        version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
+      });
+    }
+  }
+
+  return result;
+}
+
+/**
  * 解析 Markdown 文档并提取组件信息
  * @param componentName 组件名称（不包含wd-前缀）
  * @param docSource 文档来源组件名称（可选）
@@ -55,7 +171,7 @@ export function parseComponentMarkdown(
     // 尝试多种路径查找文档文件
     const possiblePaths = [
       // path.resolve(__dirname, `../src/component/${actualComponentName}.md`), // 开发环境
-      path.resolve(__dirname, `../../src/component/${actualComponentName}.md`), // 打包后运行环境
+      path.resolve(__dirname, `./src/component/${actualComponentName}.md`), // 打包后运行环境
     ];
 
     let docPath = "";
@@ -97,42 +213,16 @@ export function parseComponentMarkdown(
       // 返回子组件信息对象
       return {
         name: `wd-${componentName}`,
-        props: props.map((prop) => {
-          // 解析属性类型
-          let type: string = prop[2]?.toLowerCase() || "string";
-          let values: string[] | undefined;
-
-          // 如果类型是枚举类型，解析可选值
-          if (
-            type === "string" &&
-            prop[3] &&
-            prop[3] !== "-" &&
-            prop[3].includes("/")
-          ) {
-            values = prop[3]
-              .split("/")
-              .map((v) => v.trim())
-              .filter((v) => v !== "-");
-            if (values.length > 0) {
-              type = "enum";
-            }
-          }
-
-          // 特殊处理scope属性，它有明确的类型ButtonScope
-          if (prop[0] === "scope") {
-            type = "enum";
-            values = ["phoneNumber", "userInfo"];
-          }
-
-          return {
-            name: prop[0],
-            type,
-            values,
-            description: prop[1] || "",
-            default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-            version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-          };
-        }),
+        props: props.reduce((acc, prop) => {
+          return acc.concat(processComponentProp(prop));
+        }, [] as Array<{
+          name: string;
+          type: string;
+          values?: string[];
+          description: string;
+          default?: string;
+          version?: string;
+        }>),
         events: events.map((event) => ({
           name: event[0],
           description: event[1] || "",
@@ -177,42 +267,16 @@ export function parseComponentMarkdown(
     // 返回组件信息对象
     return {
       name: `wd-${componentName}`,
-      props: props.map((prop) => {
-        // 解析属性类型
-        let type: string = prop[2]?.toLowerCase() || "string";
-        let values: string[] | undefined;
-
-        // 如果类型是枚举类型，解析可选值
-        if (
-          type === "string" &&
-          prop[3] &&
-          prop[3] !== "-" &&
-          prop[3].includes("/")
-        ) {
-          values = prop[3]
-            .split("/")
-            .map((v) => v.trim())
-            .filter((v) => v !== "-");
-          if (values.length > 0) {
-            type = "enum";
-          }
-        }
-
-        // 特殊处理scope属性，它有明确的类型ButtonScope
-        if (prop[0] === "scope") {
-          type = "enum";
-          values = ["phoneNumber", "userInfo"];
-        }
-
-        return {
-          name: prop[0],
-          type,
-          values,
-          description: prop[1] || "",
-          default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-          version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-        };
-      }),
+      props: props.reduce((acc, prop) => {
+        return acc.concat(processComponentProp(prop));
+      }, [] as Array<{
+        name: string;
+        type: string;
+        values?: string[];
+        description: string;
+        default?: string;
+        version?: string;
+      }>),
       events: events.map((event) => ({
         name: event[0],
         description: event[1] || "",
@@ -411,7 +475,7 @@ export function loadComponentDoc(
     // 尝试多种路径查找文档文件
     const possiblePaths = [
       // path.resolve(__dirname, `../src/component/${actualComponentName}.md`), // 开发环境
-      path.resolve(__dirname, `../../src/component/${actualComponentName}.md`), // 打包后运行环境
+      path.resolve(__dirname, `./src/component/${actualComponentName}.md`), // 打包后运行环境
     ];
 
     let docPath = "";
@@ -453,8 +517,8 @@ export async function loadComponentDocAsync(
 
     // 尝试多种路径查找文档文件
     const possiblePaths = [
-      path.resolve(__dirname, `../src/component/${actualComponentName}.md`), // 开发环境
-      // path.resolve(__dirname, `../../src/component/${actualComponentName}.md`), // 打包后运行环境
+      // path.resolve(__dirname, `../src/component/${actualComponentName}.md`), // 开发环境
+      path.resolve(__dirname, `./src/component/${actualComponentName}.md`), // 打包后运行环境
     ];
 
     let docPath = "";
