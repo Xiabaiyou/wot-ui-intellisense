@@ -322,22 +322,27 @@ function extractTableSection(
   const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   /* 公用：从第一个 '|' 到 '\n\n'，再去掉表头 */
-const sliceTable = (src: string, from: number): string[][] => {
-  const end = src.indexOf('\n\n', from);
-  let raw = src.substring(from, end === -1 ? src.length : end);
-  
-  // 预处理：移除HTML标签，保留标签内的文本内容
-  raw = raw.replace(/<[^>]+>/g, '');
-  
-  const lines = raw.split('\n').filter(l => l.trim() && l.includes('|'));
-  if (lines.length < 3) return [];
-  
-  return lines.slice(2).map(line =>
-    line.split('|')
-        .map(cell => cell.trim())
-        .filter((_, i, arr) => i > 0 && i < arr.length - 1)
-  ).filter(row => row.length > 0);
-};
+  const sliceTable = (src: string, from: number): string[][] => {
+    const end = src.indexOf('\n\n', from);
+    let raw = src.substring(from, end === -1 ? src.length : end);
+    
+    // 移除HTML标签，保留标签内的文本内容
+    raw = raw.replace(/<[^>]+>/g, '');
+    
+    const lines = raw.split('\n').filter(l => l.trim());
+    if (lines.length < 3) return [];
+    
+    // 修复：只过滤掉完全不包含'|'的行，但保留只包含'|'和格式符号的分隔行
+    const validLines = lines.filter(l => l.includes('|'));
+    if (validLines.length < 3) return [];
+    
+    return validLines.slice(2).map(line =>
+      line.split('|')
+          .map(cell => cell.trim())
+          .filter((_, i, arr) => i > 0 && i < arr.length - 1)
+    ).filter(row => row.length > 0);
+  };
+
   /* ===== 1. 精确匹配：整行等于 "## PascalCase Attributes" ===== */
   if (componentName) {
     const pascal = componentName

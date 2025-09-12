@@ -152,166 +152,165 @@ export abstract class ComponentHoverProvider implements vscode.HoverProvider {
   protected abstract componentName: string;
 
   provideHover(
-    document: vscode.TextDocument,
-    position: vscode.Position
-  ): vscode.ProviderResult<vscode.Hover> {
-    try {
-      // 1. 检查是否在标签名上（支持驼峰和短横线式）
-      const kebabComponentName = camelToKebab(this.componentName);
-      if (
-        isOnTagName(document, position, this.componentName) ||
-        isOnTagName(document, position, kebabComponentName)
-      ) {
-        const markdown = new vscode.MarkdownString();
-        markdown.isTrusted = true;
-        markdown.supportHtml = true;
-        markdown.appendMarkdown(this.componentMeta.documentation);
-        return new vscode.Hover(markdown);
-      }
-
-      // 2. 检查是否在属性上（支持所有Vue写法）
-      const attrInfo = getAttributeInfoAtPosition(document, position);
-
-      // 修复组件名称匹配逻辑
-      if (
-        attrInfo &&
-        (attrInfo.tagName === this.componentName.replace("wd-", "") ||
-          attrInfo.tagName === kebabComponentName ||
-          attrInfo.tagName === kebabComponentName.replace("wd-", ""))
-      ) {
-        // 处理通用属性
-        if (attrInfo.attrName === "customClass") {
-          const markdown = new vscode.MarkdownString();
-          markdown.isTrusted = true;
-          markdown.supportHtml = true;
-          markdown.appendMarkdown("### 外部样式类\n\n");
-          markdown.appendMarkdown(
-            "`custom-class` 自定义样式类名，用于覆盖组件默认样式\n\n"
-          );
-          markdown.appendMarkdown("**类型**: string\n\n");
-          return new vscode.Hover(markdown);
-        }
-
-        if (attrInfo.attrName === "customStyle") {
-          const markdown = new vscode.MarkdownString();
-          markdown.isTrusted = true;
-          markdown.supportHtml = true;
-          markdown.appendMarkdown("### 外部样式类\n\n");
-          markdown.appendMarkdown(
-            "`custom-style` 自定义样式，用于覆盖组件默认样式\n\n"
-          );
-          markdown.appendMarkdown("**类型**: string\n\n");
-          return new vscode.Hover(markdown);
-        }
-
-        let prop, event;
-
-        // 同时匹配驼峰式和短横线式
-        const findProp = (name: string) =>
-          this.componentMeta.props.find(
-            (p: any) =>
-              p.name === name ||
-              camelToKebab(p.name) === name ||
-              kebabToCamel(p.name) === name
-          );
-
-        const findEvent = (name: string) =>
-          this.componentMeta.events?.find(
-            (e: any) =>
-              e.name === name ||
-              camelToKebab(e.name) === name ||
-              kebabToCamel(e.name) === name
-          );
-
-        if (attrInfo.isEvent) {
-          event = findEvent(attrInfo.attrName);
-          if (!event) {
-            // 尝试短横线式匹配
-            const kebabName = camelToKebab(attrInfo.attrName);
-            event = findEvent(kebabName);
-          }
-
-          if (!event) {
-            // 尝试驼峰式匹配
-            const camelName = kebabToCamel(attrInfo.attrName);
-            event = findEvent(camelName);
-          }
-
-          if (event) {
-            const markdown = new vscode.MarkdownString();
-            markdown.isTrusted = true;
-            markdown.supportHtml = true;
-
-            markdown.appendMarkdown(
-              `### ${attrInfo.isDynamic ? "动态事件" : "事件"} \`${
-                event.name
-              }\`\n\n`
-            );
-            markdown.appendMarkdown(`${event.description}\n\n`);
-            markdown.appendMarkdown(`**类型**: 事件处理器\n\n`);
-
-            if (event.arguments) {
-              markdown.appendMarkdown(`**事件参数**: \n`);
-              event.arguments.forEach((arg: any) => {
-                markdown.appendMarkdown(
-                  `- \`${arg.name}\`: ${arg.type} - ${arg.description}\n`
-                );
-              });
-              markdown.appendMarkdown("\n");
-            }
-
-            return new vscode.Hover(markdown);
-          }
-        } else {
-          // 属性悬停
-          prop = findProp(attrInfo.attrName);
-
-          if (!prop) {
-            // 尝试短横线式匹配
-            const kebabName = camelToKebab(attrInfo.attrName);
-            prop = findProp(kebabName);
-          }
-
-          if (!prop) {
-            // 尝试驼峰式匹配
-            const camelName = kebabToCamel(attrInfo.attrName);
-            prop = findProp(camelName);
-          }
-
-          if (prop) {
-            const markdown = new vscode.MarkdownString();
-            markdown.isTrusted = true;
-            markdown.supportHtml = true;
-
-            markdown.appendMarkdown(
-              `### ${attrInfo.isDynamic ? "动态属性" : "属性"} \`${
-                prop.name
-              }\`\n\n`
-            );
-            markdown.appendMarkdown(`${prop.description}\n\n`);
-            markdown.appendMarkdown(`**类型**: ${prop.type}\n\n`);
-
-            if (prop.values) {
-              markdown.appendMarkdown(
-                `**可选值**: ${prop.values.join(", ")}\n\n`
-              );
-            }
-
-            if (prop.default) {
-              markdown.appendMarkdown(`**默认值**: ${prop.default}\n\n`);
-            }
-
-            return new vscode.Hover(markdown);
-          }
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error in provideHover:", error);
-      return null;
+  document: vscode.TextDocument,
+  position: vscode.Position
+): vscode.ProviderResult<vscode.Hover> {
+  try {
+    // 1. 检查是否在标签名上（支持驼峰和短横线式）
+    const kebabComponentName = camelToKebab(this.componentName);
+    if (
+      isOnTagName(document, position, this.componentName) ||
+      isOnTagName(document, position, kebabComponentName)
+    ) {
+      const markdown = new vscode.MarkdownString();
+      markdown.isTrusted = true;
+      markdown.supportHtml = true;
+      markdown.appendMarkdown(this.componentMeta.documentation);
+      return new vscode.Hover(markdown);
     }
+
+    // 2. 检查是否在属性上（支持所有Vue写法）
+    const attrInfo = getAttributeInfoAtPosition(document, position);
+
+    // 修复组件名称匹配逻辑
+    if (
+      attrInfo &&
+      (attrInfo.tagName === this.componentName.replace("wd-", "") ||
+        attrInfo.tagName === kebabComponentName ||
+        attrInfo.tagName === kebabComponentName.replace("wd-", ""))
+    ) {
+      // 处理外部样式类属性
+      if (this.componentMeta.externalClasses) {
+        // 查找匹配的外部样式类
+        const externalClass = this.componentMeta.externalClasses.find((ec: any) => 
+          ec.name === attrInfo.attrName || 
+          camelToKebab(ec.name) === attrInfo.attrName
+        );
+        
+        if (externalClass) {
+          const markdown = new vscode.MarkdownString();
+          markdown.isTrusted = true;
+          markdown.supportHtml = true;
+          markdown.appendMarkdown("### 外部样式类\n\n");
+          markdown.appendMarkdown(
+            `${externalClass.name} ${externalClass.description || ''}\n\n`
+          );
+          markdown.appendMarkdown("**类型**: string\n\n");
+          if (externalClass.version) {
+            markdown.appendMarkdown(`**最低版本**: ${externalClass.version}\n\n`);
+          }
+          return new vscode.Hover(markdown);
+        }
+      }
+
+      let prop, event;
+
+      // 同时匹配驼峰式和短横线式
+      const findProp = (name: string) =>
+        this.componentMeta.props.find(
+          (p: any) =>
+            p.name === name ||
+            camelToKebab(p.name) === name ||
+            kebabToCamel(p.name) === name
+        );
+
+      const findEvent = (name: string) =>
+        this.componentMeta.events?.find(
+          (e: any) =>
+            e.name === name ||
+            camelToKebab(e.name) === name ||
+            kebabToCamel(e.name) === name
+        );
+
+      if (attrInfo.isEvent) {
+        event = findEvent(attrInfo.attrName);
+        if (!event) {
+          // 尝试短横线式匹配
+          const kebabName = camelToKebab(attrInfo.attrName);
+          event = findEvent(kebabName);
+        }
+
+        if (!event) {
+          // 尝试驼峰式匹配
+          const camelName = kebabToCamel(attrInfo.attrName);
+          event = findEvent(camelName);
+        }
+
+        if (event) {
+          const markdown = new vscode.MarkdownString();
+          markdown.isTrusted = true;
+          markdown.supportHtml = true;
+
+          markdown.appendMarkdown(
+            `### ${attrInfo.isDynamic ? "动态事件" : "事件"} \`${
+              event.name
+            }\`\n\n`
+          );
+          markdown.appendMarkdown(`${event.description}\n\n`);
+          markdown.appendMarkdown(`**类型**: 事件处理器\n\n`);
+
+          if (event.arguments) {
+            markdown.appendMarkdown(`**事件参数**: \n`);
+            event.arguments.forEach((arg: any) => {
+              markdown.appendMarkdown(
+                `- \`${arg.name}\`: ${arg.type} - ${arg.description}\n`
+              );
+            });
+            markdown.appendMarkdown("\n");
+          }
+
+          return new vscode.Hover(markdown);
+        }
+      } else {
+        // 属性悬停
+        prop = findProp(attrInfo.attrName);
+
+        if (!prop) {
+          // 尝试短横线式匹配
+          const kebabName = camelToKebab(attrInfo.attrName);
+          prop = findProp(kebabName);
+        }
+
+        if (!prop) {
+          // 尝试驼峰式匹配
+          const camelName = kebabToCamel(attrInfo.attrName);
+          prop = findProp(camelName);
+        }
+
+        if (prop) {
+          const markdown = new vscode.MarkdownString();
+          markdown.isTrusted = true;
+          markdown.supportHtml = true;
+
+          markdown.appendMarkdown(
+            `### ${attrInfo.isDynamic ? "动态属性" : "属性"} \`${
+              prop.name
+            }\`\n\n`
+          );
+          markdown.appendMarkdown(`${prop.description}\n\n`);
+          markdown.appendMarkdown(`**类型**: ${prop.type}\n\n`);
+
+          if (prop.values) {
+            markdown.appendMarkdown(
+              `**可选值**: ${prop.values.join(", ")}\n\n`
+            );
+          }
+
+          if (prop.default) {
+            markdown.appendMarkdown(`**默认值**: ${prop.default}\n\n`);
+          }
+
+          return new vscode.Hover(markdown);
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error in provideHover:", error);
+    return null;
   }
+}
 }
 
 // ======================== 诊断提供者 ========================

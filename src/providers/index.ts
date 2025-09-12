@@ -3,7 +3,10 @@
 import * as vscode from "vscode";
 import { COMPONENT_MAP } from "../utils/component_map";
 import { loadComponentSchema } from "../utils/schema-loader";
-import { GenericComponentHoverProvider,UnifiedComponentCompletionProvider } from "../providers/component-factory";
+import {
+  GenericComponentHoverProvider,
+  UnifiedComponentCompletionProvider,
+} from "../providers/component-factory";
 
 export async function registerAll(context: vscode.ExtensionContext) {
   console.log(`Registering ${COMPONENT_MAP.length} components`);
@@ -21,6 +24,8 @@ export async function registerAll(context: vscode.ExtensionContext) {
         selector,
         unifiedProvider,
         "<",
+        "\n",
+        "\t",
         " ",
         ":",
         "@" // 触发字符
@@ -55,4 +60,3 @@ export async function registerAll(context: vscode.ExtensionContext) {
     console.error("Failed to register unified completion provider:", error);
   }
 }
-

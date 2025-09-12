@@ -9,25 +9,11 @@
 
 <p align="center">🚀 一个为 Wot UI 组件库提供智能提示的 VS Code 插件</p>
 
-<p align="center">
-<a href="https://marketplace.visualstudio.com/items?itemName=baiyou.wot-ui-intellisense" target="_blank">
-  <img src="https://vsmarketplacebadges.dev/version/baiyou/wot-ui-intellisense.png?color=blue&style=flat-square" alt="VS Code Marketplace">
-</a>
-
-<a href="https://marketplace.visualstudio.com/items?itemName=baiyou.wot-ui-intellisense" target="_blank">
-  <img src="https://vsmarketplacebadges.dev/installs/baiyou/wot-ui-intellisense.png?color=blue&style=flat-square" alt="Installs">
-</a>
-
-<a href="https://marketplace.visualstudio.com/items?itemName=baiyou.wot-ui-intellisense" target="_blank">
-  <img src="https://vsmarketplacebadges.dev/rating-star/baiyou/wot-ui-intellisense.png?color=blue&style=flat-square" alt="Rating">
-</a>
-</p>
-
 ## ✨ 特性
 
 - 🎯 为 80+ 个 Wot UI 组件提供智能代码补全
 - 🚀 支持组件标签、属性、事件的智能提示
-- 💪 支持驼峰式(camelCase)和短横线式(kebab-case)两种命名方式
+- 💪 支持短横线式(kebab-case)命名方式
 - 📖 悬停显示组件和属性的详细文档说明
 - 🔍 支持动态属性(:prop)和事件(@event)绑定补全
 - 🛡️ 提供组件属性值验证和错误诊断功能
@@ -56,7 +42,6 @@
   <wd-button type="primary">确认</wd-button>
 </template>
 ```
-
 ### 属性补全
 在组件标签内输入空格后，可获得属性补全提示：
 
@@ -71,7 +56,6 @@
   </wd-button>
 </template>
 ```
-
 ### 事件补全
 输入 `@` 符号可获得事件补全提示：
 
@@ -85,7 +69,6 @@
   </wd-button>
 </template>
 ```
-
 ### 动态属性补全
 输入 `:` 符号可获得动态属性绑定补全提示：
 
@@ -99,7 +82,6 @@
   </wd-button>
 </template>
 ```
-
 ## 🎯 支持的功能
 
 ### 1. 组件标签补全
@@ -120,14 +102,13 @@
 - 鼠标悬停在事件上显示事件说明
 
 
-
 ## ⚙️ 配置
 
 暂无配置项，插件开箱即用。
 
 ## 📝 更新日志
 
-详细更新日志请查看 [CHANGELOG.md](./CHANGELOG.md)
+详细更新日志请点击上面查看
 
 ## 📞 支持
 

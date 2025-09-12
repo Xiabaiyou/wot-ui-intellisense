@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
-import { ComponentMeta } from '../utils/schema-loader';
-import { ComponentHoverProvider } from './../utils/index';
+import * as vscode from "vscode";
+import { ComponentMeta } from "../utils/schema-loader";
+import { ComponentHoverProvider } from "./../utils/index";
 import { COMPONENT_MAP } from "../utils/component_map";
 import { loadComponentSchema } from "../utils/schema-loader";
 /**
@@ -9,14 +9,13 @@ import { loadComponentSchema } from "../utils/schema-loader";
 export class GenericComponentHoverProvider extends ComponentHoverProvider {
   protected componentName: string;
   protected componentMeta: ComponentMeta;
-  
+
   constructor(componentName: string, componentMeta: ComponentMeta) {
     super();
     this.componentName = componentName;
     this.componentMeta = componentMeta;
   }
 }
-
 
 // 统一的组件补全提供者
 export class UnifiedComponentCompletionProvider
@@ -30,6 +29,7 @@ export class UnifiedComponentCompletionProvider
       try {
         const componentName = tag.replace("wd-", "");
         const componentMeta = loadComponentSchema(componentName, docSource);
+        console.log(componentMeta);
         this.componentMap.set(tag, componentMeta);
         this.componentMap.set(componentName, componentMeta); // 同时支持驼峰式
       } catch (error) {
@@ -40,7 +40,7 @@ export class UnifiedComponentCompletionProvider
 
   provideCompletionItems(
     document: vscode.TextDocument,
-    position: vscode.Position,
+    position: vscode.Position
   ): vscode.ProviderResult<vscode.CompletionItem[]> {
     const linePrefix = document
       .lineAt(position)
@@ -120,36 +120,6 @@ export class UnifiedComponentCompletionProvider
 
     // 静态属性补全
     componentMeta.props.forEach((prop: any) => {
-      // // 驼峰式属性
-      // const camelItem = new vscode.CompletionItem(
-      //   prop.name,
-      //   vscode.CompletionItemKind.Property
-      // );
-      // camelItem.documentation = prop.description;
-      // if (prop.type === "enum") {
-      //   camelItem.insertText = new vscode.SnippetString(
-      //     `${prop.name}="\${1|${prop.values!.join(",")}|}"`
-      //   );
-      // } else if (prop.type === "boolean") {
-      //   camelItem.insertText = new vscode.SnippetString(
-      //     `${prop.name}="\${1|true,false|}"`
-      //   );
-      // } else {
-      //   camelItem.insertText = new vscode.SnippetString(`${prop.name}="$1"`);
-      // }
-      // camelItem.label = {
-      //   label: prop.name,
-      //   description: "Wot UI IntelliSense",
-      // };
-      // camelItem.sortText = '0';
-      // camelItem.preselect = true;
-      // camelItem.kind = vscode.CompletionItemKind.Snippet;
-      // camelItem.command = {
-      //   command: "editor.action.triggerSuggest",
-      //   title: "",
-      // };
-      // items.push(camelItem);
-
       // 短横线式属性
       const kebabName = prop.name.replace(/([A-Z])/g, "-$1").toLowerCase();
       const kebabItem = new vscode.CompletionItem(
@@ -172,7 +142,7 @@ export class UnifiedComponentCompletionProvider
         label: kebabName,
         description: "Wot UI IntelliSense",
       };
-      kebabItem.sortText = '0';
+      kebabItem.sortText = "0";
       kebabItem.preselect = true;
       kebabItem.kind = vscode.CompletionItemKind.Snippet;
       kebabItem.command = {
@@ -209,7 +179,7 @@ export class UnifiedComponentCompletionProvider
         label: `@${kebabEventName}`,
         description: "Wot UI IntelliSense",
       };
-      kebabEventItem.sortText = '0';
+      kebabEventItem.sortText = "0";
       kebabEventItem.preselect = true;
       kebabEventItem.kind = vscode.CompletionItemKind.Snippet;
       kebabEventItem.command = {
@@ -217,6 +187,29 @@ export class UnifiedComponentCompletionProvider
         title: "",
       };
       items.push(kebabEventItem);
+    });
+    // 自定义样式类
+    componentMeta.externalClasses?.forEach((externalClass: any) => {
+      // 短横线式 class 形式
+      const kebabClassName = externalClass.name
+        .replace(/([A-Z])/g, "-$1")
+        .toLowerCase();
+      const kebabClassItem = new vscode.CompletionItem(
+        `${kebabClassName}`,
+        vscode.CompletionItemKind.Property
+      );
+      kebabClassItem.documentation = externalClass.description;
+      kebabClassItem.insertText = new vscode.SnippetString(
+        `${kebabClassName}="$1"`
+      );
+      kebabClassItem.label = {
+        label: `${kebabClassName}`,
+        description: "Wot UI IntelliSense",
+      };
+      kebabClassItem.sortText = "0";
+      kebabClassItem.preselect = true;
+      kebabClassItem.kind = vscode.CompletionItemKind.Property;
+      items.push(kebabClassItem);
     });
 
     return items;
@@ -226,24 +219,38 @@ export class UnifiedComponentCompletionProvider
     document: vscode.TextDocument,
     position: vscode.Position
   ): string | null {
-    const lineText = document.lineAt(position).text;
-    const beforeCursor = lineText.substring(0, position.character);
+    // 获取从文档开始到光标位置的所有文本
+    const textBeforeCursor = document.getText(
+      new vscode.Range(new vscode.Position(0, 0), position)
+    );
 
-    // 找到最近的标签开始
-    const tagStartIndex = beforeCursor.lastIndexOf("<");
-    const tagEndIndex = beforeCursor.lastIndexOf(">");
+    // 从光标位置向前查找最近的未闭合标签
+    let tagStartIndex = -1;
+    let tagEndIndex = -1;
 
-    if (tagStartIndex === -1 || tagStartIndex < tagEndIndex) {
-      return null;
+    // 从后向前查找最近的 < 和 >
+    for (let i = textBeforeCursor.length - 1; i >= 0; i--) {
+      const char = textBeforeCursor[i];
+      if (char === ">") {
+        tagEndIndex = i;
+        break;
+      } else if (char === "<") {
+        tagStartIndex = i;
+        break;
+      }
     }
 
-    // 提取标签名（支持不完整的标签）
-    const tagContent = beforeCursor.substring(tagStartIndex + 1);
-    const tagNameMatch = tagContent.match(/^([a-zA-Z0-9-]+)/);
-    
-    // 如果光标在标签内部，但标签尚未闭合
-    if (tagNameMatch) {
-      return tagNameMatch[1];
+    // 如果找到了开始标签但没有找到结束标签，说明光标在标签内部
+    if (
+      tagStartIndex !== -1 &&
+      (tagEndIndex === -1 || tagEndIndex < tagStartIndex)
+    ) {
+      // 提取标签内容并获取标签名
+      const tagContent = textBeforeCursor.substring(tagStartIndex + 1);
+      const tagNameMatch = tagContent.match(/^([a-zA-Z0-9-]+)/);
+      if (tagNameMatch) {
+        return tagNameMatch[1];
+      }
     }
 
     return null;
@@ -253,19 +260,52 @@ export class UnifiedComponentCompletionProvider
     document: vscode.TextDocument,
     position: vscode.Position
   ): boolean {
-    const lineText = document.lineAt(position).text;
-    const beforeCursor = lineText.substring(0, position.character);
+    // 获取从文档开始到光标位置的所有文本
+    const textBeforeCursor = document.getText(
+      new vscode.Range(new vscode.Position(0, 0), position)
+    );
 
-    // 标签开始后且未闭合，且不在引号内
-    const tagStartIndex = beforeCursor.lastIndexOf("<");
-    const tagEndIndex = beforeCursor.lastIndexOf(">");
+    // 从光标位置向前查找最近的未闭合标签
+    let tagStartIndex = -1;
+    let tagEndIndex = -1;
 
-    if (tagStartIndex === -1 || tagStartIndex < tagEndIndex) {
-      return false;
+    // 从后向前查找最近的 < 和 >
+    for (let i = textBeforeCursor.length - 1; i >= 0; i--) {
+      const char = textBeforeCursor[i];
+      if (char === ">") {
+        tagEndIndex = i;
+        break;
+      } else if (char === "<") {
+        tagStartIndex = i;
+        break;
+      }
     }
 
-    // 检查引号是否闭合
-    const quoteCount = (beforeCursor.match(/["']/g) || []).length;
-    return quoteCount % 2 === 0;
+    // 如果找到了开始标签但没有找到结束标签，说明光标在标签内部
+    if (
+      tagStartIndex !== -1 &&
+      (tagEndIndex === -1 || tagEndIndex < tagStartIndex)
+    ) {
+      // 检查标签内的引号是否闭合，避免在属性值内部触发补全
+      const textInTag = textBeforeCursor.substring(tagStartIndex);
+      const quoteCount = (textInTag.match(/["']/g) || []).length;
+
+      // 还需要检查当前位置是否在属性值内部
+      const textFromTagStart = textBeforeCursor.substring(tagStartIndex);
+      const lastEqualsIndex = textFromTagStart.lastIndexOf("=");
+      const lastQuoteIndex = Math.max(
+        textFromTagStart.lastIndexOf('"'),
+        textFromTagStart.lastIndexOf("'")
+      );
+
+      // 如果等号在引号之后，说明光标不在属性值内部
+      if (lastEqualsIndex > lastQuoteIndex) {
+        return quoteCount % 2 === 1; // 等号后缺少闭合引号
+      }
+
+      return quoteCount % 2 === 0;
+    }
+
+    return false;
   }
 }
