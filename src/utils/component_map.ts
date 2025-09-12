@@ -1,9 +1,4 @@
-import * as vscode from "vscode";
-import { loadComponentSchema } from "./schema-loader";
-import {
-  GenericComponentCompletionProvider,
-  GenericComponentHoverProvider,
-} from "../providers/component-factory";
+
 
 interface ComponentConfig {
   tag: string;
@@ -12,7 +7,6 @@ interface ComponentConfig {
   docSource?: string; // 添加文档来源字段
 }
 
-// 组件映射表
 // 组件映射表
 export const COMPONENT_MAP: ComponentConfig[] = [
   { tag: "wd-action-sheet" },
@@ -114,35 +108,3 @@ export const COMPONENT_MAP: ComponentConfig[] = [
 
 // 默认触发字符
 export const DEFAULT_TRIGGERS = ["<", " ", ":", '"', "'"];
-
-// 动态导入所有组件提供者
-export async function loadComponentProviders(tag: string, modulePath: string) {
-  try {
-    const componentName = tag.replace("wd-", "");
-    // 查找组件配置
-    const componentConfig = COMPONENT_MAP.find((item) => item.tag === tag);
-    // 传递文档来源参数
-    const componentMeta = loadComponentSchema(
-      componentName,
-      componentConfig?.docSource
-    );
-
-    return {
-      provider: new GenericComponentCompletionProvider(tag, componentMeta),
-      hover: new GenericComponentHoverProvider(tag, componentMeta),
-    };
-  } catch (error) {
-    console.error(`Failed to load component providers for ${tag}:`, error);
-    throw error;
-  }
-}
-
-// 根据标签名获取类名
-function getComponentClassName(tag: string): string {
-  // 移除 'wd-' 前缀并转换为大驼峰命名
-  return tag
-    .substring(3)
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.substring(1))
-    .join("");
-}

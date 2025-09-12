@@ -81,40 +81,55 @@ function processComponentProp(prop: string[]): Array<{
   }> = [];
 
   // 处理复合属性名，如 'v-model / modelValue' 或 'modelValue / v-model' 等
-  const propNames = prop[0].split('/').map(name => name.trim().replace(/`/g, ''));
-  const normalizedNames = propNames.map(name => {
+  const propNames = prop[0]
+    .split("/")
+    .map((name) => name.trim().replace(/`/g, ""));
+  const normalizedNames = propNames.map((name) => {
     // 标准化属性名，移除反引号
-    return name.replace(/`/g, '');
+    return name.replace(/`/g, "");
   });
-  
+
   // 添加所有属性名作为独立属性
   normalizedNames.forEach((name, index) => {
     result.push({
       name: name,
       type,
       values,
-      description: index === 0 ? (prop[1] || "") : `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+      description:
+        index === 0
+          ? prop[1] || ""
+          : `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
       default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
       version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
     });
   });
 
   // 检查是否包含v-model相关属性名
-  const hasVModel = normalizedNames.some(name => 
-    name === "v-model" || name === "modelValue" || name === "model-value"
+  const hasVModel = normalizedNames.some(
+    (name) =>
+      name === "v-model" || name === "modelValue" || name === "model-value"
   );
 
   // 如果包含v-model相关属性，确保三种形式都存在
   if (hasVModel) {
     const existingNames = new Set(normalizedNames);
     const vModelForms = [
-      { name: "v-model", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
-      { name: "model-value", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
-      { name: "modelValue", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` }
+      {
+        name: "v-model",
+        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+      },
+      {
+        name: "model-value",
+        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+      },
+      {
+        name: "modelValue",
+        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+      },
     ];
-    
+
     // 确保所有v-model形式都存在
-    vModelForms.forEach(form => {
+    vModelForms.forEach((form) => {
       if (!existingNames.has(form.name)) {
         result.push({
           name: form.name,
@@ -189,16 +204,19 @@ export function parseComponentMarkdown(
       // 返回子组件信息对象
       return {
         name: `wd-${componentName}`,
-        props: props.reduce((acc, prop) => {
-          return acc.concat(processComponentProp(prop));
-        }, [] as Array<{
-          name: string;
-          type: string;
-          values?: string[];
-          description: string;
-          default?: string;
-          version?: string;
-        }>),
+        props: props.reduce(
+          (acc, prop) => {
+            return acc.concat(processComponentProp(prop));
+          },
+          [] as Array<{
+            name: string;
+            type: string;
+            values?: string[];
+            description: string;
+            default?: string;
+            version?: string;
+          }>
+        ),
         events: events.map((event) => ({
           name: event[0],
           description: event[1] || "",
@@ -243,16 +261,19 @@ export function parseComponentMarkdown(
     // 返回组件信息对象
     return {
       name: `wd-${componentName}`,
-      props: props.reduce((acc, prop) => {
-        return acc.concat(processComponentProp(prop));
-      }, [] as Array<{
-        name: string;
-        type: string;
-        values?: string[];
-        description: string;
-        default?: string;
-        version?: string;
-      }>),
+      props: props.reduce(
+        (acc, prop) => {
+          return acc.concat(processComponentProp(prop));
+        },
+        [] as Array<{
+          name: string;
+          type: string;
+          values?: string[];
+          description: string;
+          default?: string;
+          version?: string;
+        }>
+      ),
       events: events.map((event) => ({
         name: event[0],
         description: event[1] || "",
@@ -298,34 +319,38 @@ function extractTableSection(
   sectionTitle: string,
   componentName?: string
 ): string[][] {
-  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   /* 公用：从第一个 '|' 到 '\n\n'，再去掉表头 */
-  const sliceTable = (src: string, from: number): string[][] => {
-    const end = src.indexOf('\n\n', from);
-    const raw = src.substring(from, end === -1 ? src.length : end);
-    const lines = raw.split('\n').filter(l => l.trim() && l.includes('|'));
-    if (lines.length < 3) return [];
-    return lines.slice(2).map(line =>
-      line.split('|')
-          .map(cell => cell.trim())
-          .filter((_, i, arr) => i > 0 && i < arr.length - 1)
-    ).filter(row => row.length > 0);
-  };
-
+const sliceTable = (src: string, from: number): string[][] => {
+  const end = src.indexOf('\n\n', from);
+  let raw = src.substring(from, end === -1 ? src.length : end);
+  
+  // 预处理：移除HTML标签，保留标签内的文本内容
+  raw = raw.replace(/<[^>]+>/g, '');
+  
+  const lines = raw.split('\n').filter(l => l.trim() && l.includes('|'));
+  if (lines.length < 3) return [];
+  
+  return lines.slice(2).map(line =>
+    line.split('|')
+        .map(cell => cell.trim())
+        .filter((_, i, arr) => i > 0 && i < arr.length - 1)
+  ).filter(row => row.length > 0);
+};
   /* ===== 1. 精确匹配：整行等于 "## PascalCase Attributes" ===== */
   if (componentName) {
     const pascal = componentName
-      .split('-')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join('');
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join("");
     const exactReg = new RegExp(
       `(?:^|\\n)#{2,3}\\s*${pascal}\\s+${escape(sectionTitle)}\\s*$`,
-      'im'
+      "im"
     );
     const m = exactReg.exec(content);
     if (m) {
-      const pipe = content.indexOf('|', m.index + m[0].length);
+      const pipe = content.indexOf("|", m.index + m[0].length);
       if (pipe !== -1) return sliceTable(content, pipe);
     }
   }
@@ -333,16 +358,16 @@ function extractTableSection(
   /* ===== 2. 模糊匹配：行内包含组件名+标题 ===== */
   if (componentName) {
     const pascal = componentName
-      .split('-')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join('');
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join("");
     const fuzzyReg = new RegExp(
       `(?:^|\\n)#{2,3}\\s*\\w*${pascal}\\w*\\s+${escape(sectionTitle)}\\s*$`,
-      'im'
+      "im"
     );
     const m = fuzzyReg.exec(content);
     if (m) {
-      const pipe = content.indexOf('|', m.index + m[0].length);
+      const pipe = content.indexOf("|", m.index + m[0].length);
       if (pipe !== -1) return sliceTable(content, pipe);
     }
   }
@@ -350,11 +375,11 @@ function extractTableSection(
   /* ===== 3. 通用回落：纯 "## Attributes" ===== */
   const normalReg = new RegExp(
     `(?:^|\\n)#{2,3}\\s*${escape(sectionTitle)}\\s*$`,
-    'im'
+    "im"
   );
   const m = normalReg.exec(content);
   if (m) {
-    const pipe = content.indexOf('|', m.index + m[0].length);
+    const pipe = content.indexOf("|", m.index + m[0].length);
     if (pipe !== -1) return sliceTable(content, pipe);
   }
 

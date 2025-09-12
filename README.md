@@ -1,150 +1,139 @@
 <p align="center">
     <img alt="logo" src="https://wot-ui.cn/logo.png" width="200">
 </p>
-<h1 align="center">Wot UI</h1>
+<h1 align="center">Wot UI IntelliSense</h1>
 
 <div align="center">
 <p>简体中文</p>
 </div>
 
-<p align="center">📱 一个基于vue3+Typescript构建，参照<a href="https://github.com/jd-ftf/wot-design-mini?tab=readme-ov-file">wot-design</a>打造的uni-app组件库</p>
+<p align="center">🚀 一个为 Wot UI 组件库提供智能提示的 VS Code 插件</p>
 
 <p align="center">
-
-<a href="https://github.com/Moonofweisheng/wot-design-uni">
-  <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Moonofweisheng/wot-design-uni?logo=github&color=%234d80f0&link=https%3A%2F%2Fgithub.com%2FMoonofweisheng%2Fwot-design-uni&style=flat-square">
- </a>
-
-
-<a href="https://github.com/Moonofweisheng/wot-design-uni">
-  <img alt="GitHub" src="https://img.shields.io/codecov/c/github/Moonofweisheng/wot-design-uni?style=flat-square">
- </a>
-
-<a href="https://www.npmjs.com/package/wot-design-uni">
-  <img alt="npm" src="https://img.shields.io/npm/dm/wot-design-uni?logo=npm&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fwot-design-uni&style=flat-square">
+<a href="https://marketplace.visualstudio.com/items?itemName=baiyou.wot-ui-intellisense" target="_blank">
+  <img src="https://vsmarketplacebadges.dev/version/baiyou/wot-ui-intellisense.png?color=blue&style=flat-square" alt="VS Code Marketplace">
 </a>
 
- <a href="https://www.npmjs.com/package/wot-design-uni">
-  <img alt="npm" src="https://img.shields.io/npm/v/wot-design-uni?logo=npm&color=%234d80f0&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Fwot-design-uni&style=flat-square">
+<a href="https://marketplace.visualstudio.com/items?itemName=baiyou.wot-ui-intellisense" target="_blank">
+  <img src="https://vsmarketplacebadges.dev/installs/baiyou/wot-ui-intellisense.png?color=blue&style=flat-square" alt="Installs">
 </a>
 
-<a href="https://github.com/actions-cool/" target="_blank" referrerpolicy="no-referrer">
-  <img src="https://img.shields.io/badge/using-actions--cool-red?style=flat-square" alt="actions-cool" />
+<a href="https://marketplace.visualstudio.com/items?itemName=baiyou.wot-ui-intellisense" target="_blank">
+  <img src="https://vsmarketplacebadges.dev/rating-star/baiyou/wot-ui-intellisense.png?color=blue&style=flat-square" alt="Rating">
 </a>
-
-<a href="https://app.netlify.com/sites/wot-design-uni/deploys" target="_blank" referrerpolicy="no-referrer">
-  <img src="https://api.netlify.com/api/v1/badges/0991d8a9-0fb0-483b-8961-5bde066bbd50/deploy-status" alt="deploy-status" />
-</a>
-
-</p>
-
-<p align="center">
-  🚀 <a href="https://wot-ui.cn">文档网站 (推荐)</a>&nbsp;
-  ✈️ <a href="https://wot-design-uni.pages.dev/">文档网站（cloudflare）</a>&nbsp;
-  🔥 <a href="https://wot-design-uni.netlify.app/">文档网站 (Netlify)</a>
 </p>
 
 ## ✨ 特性
 
-- 🎯 多平台覆盖，支持 微信小程序、支付宝小程序、钉钉小程序、H5、APP 等.
-- 🚀 70+ 个高质量组件，覆盖移动端主流场景.
-- 💪 使用 Typescript 构建，提供良好的组件类型系统.
-- 🌍 支持国际化，内置 15 种语言包.
-- 📖 提供丰富的文档和组件示例.
-- 🎨 支持修改 CSS 变量实现主题定制.
-- 🍭 支持暗黑模式
+- 🎯 为 80+ 个 Wot UI 组件提供智能代码补全
+- 🚀 支持组件标签、属性、事件的智能提示
+- 💪 支持驼峰式(camelCase)和短横线式(kebab-case)两种命名方式
+- 📖 悬停显示组件和属性的详细文档说明
+- 🔍 支持动态属性(:prop)和事件(@event)绑定补全
+- 🛡️ 提供组件属性值验证和错误诊断功能
+- 📄 支持 Vue 和 HTML 文件
 
-## 📱 预览
+## 📦 安装
 
-扫描二维码访问演示，注意：因微信审核机制限制，当前的微信小程序示例可能不是最新版本，可以 clone 代码到本地预览。
+### 方法一：VS Code 扩展市场安装（推荐）
+1. 在 VS Code 扩展市场中搜索 `wot-ui-intellisense`
+2. 点击安装
 
-<p style="display:flex;gap:24px">
-<img src="https://wot-ui.cn/wx.jpg" width="200" height="200"/>
-<img src="https://wot-ui.cn/alipay.png" width="200" height="200" />
-<img src="https://wot-ui.cn/h5.png" width="200" height="200" />
-<img src="https://wot-ui.cn/android.png" width="200" height="200" />
+### 方法二：离线安装
+1. 下载 `.vsix` 文件
+2. 在 VS Code 中按 `Ctrl+Shift+P` 打开命令面板
+3. 输入 `Extensions: Install from VSIX...`
+4. 选择下载的 `.vsix` 文件进行安装
 
-</p>
+## 🚀 使用说明
 
-## 快速上手
+### 组件补全
+在 `.vue` 或 `.html` 文件中，输入 `<wd` 即可触发组件补全提示：
 
-详细说明见 [快速上手](https://wot-ui.cn/guide/quick-use.html)。
+```vue
+<template>
+  <!-- 输入 <wd-button 即可获得组件补全 -->
+  <wd-button type="primary">确认</wd-button>
+</template>
+```
 
-## 链接
+### 属性补全
+在组件标签内输入空格后，可获得属性补全提示：
 
-- [常见问题](https://wot-ui.cn/guide/common-problems.html)
-- [更新日志](https://wot-ui.cn/guide/changelog.html)
-- [Discussions 讨论区](https://github.com/Moonofweisheng/wot-design-uni/discussions)
-- [QQ 群](https://wot-ui.cn/guide/join-group.html)
-  
-## 优秀案例
+```vue
+<template>
+  <!-- 输入空格后显示属性补全 -->
+  <wd-button 
+    type="primary" 
+    size="medium" 
+    round>
+    确认
+  </wd-button>
+</template>
+```
 
-[这里](https://wot-ui.cn/guide/cases.html)我们收集了一些优秀的案例，欢迎大家体验！
+### 事件补全
+输入 `@` 符号可获得事件补全提示：
 
-我们也非常欢迎大家一起贡献优秀的 Demo 与案例，欢迎在此 [issue](https://github.com/Moonofweisheng/wot-design-uni/issues/16) 提交案例。
+```vue
+<template>
+  <!-- 输入 @ 显示事件补全 -->
+  <wd-button 
+    @click="handleClick"
+    @focus="handleFocus">
+    确认
+  </wd-button>
+</template>
+```
 
-## 周边生态
+### 动态属性补全
+输入 `:` 符号可获得动态属性绑定补全提示：
 
-| 项目                                                                                                        | 描述                                                 |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [awesome-uni-app](https://github.com/uni-helper/awesome-uni-app)                                            | 多端统一开发框架 uni-app 优秀开发资源汇总            |
-| [create-uni](https://github.com/uni-helper/create-uni)                                                      | 快速创建 uni-app 项目                                |
-| [wot-starter](https://github.com/wot-ui/wot-starter)                  | 基于 [vitesse-uni-app](https://github.com/uni-helper/vitesse-uni-app) 的 wot-ui 快速起手项目     |
-| [wot-starter-retail](https://github.com/Moonofweisheng/wot-starter-retail)                                  | 基于 wot-design-uni 的 uni-app 零售行业模板          |
-| [Wot UI Snippets](https://marketplace.visualstudio.com/items?itemName=kiko.wot-design-uni-snippets) | Wot UI 代码块提示                            |
-| [uni-mini-ci](https://github.com/Moonofweisheng/uni-mini-ci)                                                | 一个 uni-app 小程序端构建后支持 CI（持续集成）的插件 |
-| [uni-mini-router](https://github.com/Moonofweisheng/uni-mini-router)                                        | 一个基于 vue3 和 Typescript 的轻量级 uni-app 路由库  |
-| [unibest](https://github.com/unibest-tech/unibest)                                                              | 基于 wot-design-uni 的 uni-app 模板                  |
-| [wot-design-uni AI 助手](https://www.coze.cn/store/bot/7347916532258701363)                                 | 一个能回答你关于 wot-design-uni 组件库问题的智能助手 |
-| [uni-ku-root](https://github.com/uni-ku/root)                                                               | 一个模拟 App.vue 原有能力的根组件插件                  |
+```vue
+<template>
+  <!-- 输入 : 显示动态属性补全 -->
+  <wd-button 
+    :type="buttonType"
+    :disabled="isDisabled">
+    确认
+  </wd-button>
+</template>
+```
 
-## 贡献指南
+## 🎯 支持的功能
 
-修改代码请阅读我们的 [贡献指南](./.github/CONTRIBUTING.md)。
+### 1. 组件标签补全
+- 支持所有 Wot UI 组件标签补全
 
-使用过程中发现任何问题都可以提 [Issue](https://github.com/Moonofweisheng/wot-design-uni/issues) 给我们，当然，我们也非常欢迎你给我们发 [PR](https://github.com/Moonofweisheng/wot-design-uni/pulls)。
+### 2. 属性提示
+- 静态属性提示（type="primary"）
+- 动态属性提示（:type="primary"）
+- 布尔属性提示（disabled）
 
-## 贡献者们
+### 3. 事件补全
+- 事件绑定补全（@click）
+- 动态事件绑定（v-on:click）
 
-感谢以下所有给 Wot UI 贡献过代码的 [开发者](https://github.com/Moonofweisheng/wot-design-uni/graphs/contributors)。
-
-<a href="https://github.com/Moonofweisheng/wot-design-uni/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Moonofweisheng/wot-design-uni" />
-</a>
-
-## 捐赠本项目
-
-开发一个 UI 组件库是一项耗时的工作，尤其是要多端适配。为此 Wot UI 经常肝到深夜 ……  
-
-如果您认为 Wot UI 帮助到了您的开发工作，您可以捐赠 Wot UI 的研发工作，捐赠无门槛，哪怕是一杯可乐也好。
-
-捐赠后您的昵称、留言等将会展示在[捐赠榜单](https://wot-ui.cn/reward/donor.html)中。
-
-
-### 爱发电捐赠
-
-<a href="https://afdian.com/a/weisheng233">https://afdian.com/a/weisheng233</a>
-
-### 扫码捐赠
-
-<p>
-<img src="https://wot-ui.cn/weixinQrcode.jpg" width="200" height="200" style="margin-right:30px"/>
-<img src="https://wot-ui.cn/alipayQrcode.jpg" width="200" height="200" />
-</p>
-
-## 鸣谢
-
-- [wot-design](https://github.com/jd-ftf/wot-design-mini) - 感谢 wot-design 团队多年来的不断维护，让 wot-design-uni 能够站在巨人的肩膀上。
-- [uni-helper](https://github.com/uni-helper) - 感谢 uni-helper 团队提供的 uni-app 工具库，让 wot-design-uni 能够更方便地使用。
-- [捐赠者](https://wot-ui.cn/reward/donor.html) - 感谢所有捐赠者，是你们的捐赠让 wot-design-uni 能够更好地发展。
-
-
-## 开源协议
-
-本项目基于 [MIT](https://zh.wikipedia.org/wiki/MIT%E8%A8%B1%E5%8F%AF%E8%AD%89) 协议，请自由地享受和参与开源。
+### 4. 悬停提示
+- 鼠标悬停在组件标签上显示组件说明
+- 鼠标悬停在属性上显示属性说明
+- 鼠标悬停在事件上显示事件说明
 
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Moonofweisheng/wot-design-uni&type=Date)](https://star-history.com/#Moonofweisheng/wot-design-uni&Date)
 
-<!-- ## 打包
-1. vsce package  -->
+## ⚙️ 配置
+
+暂无配置项，插件开箱即用。
+
+## 📝 更新日志
+
+详细更新日志请查看 [CHANGELOG.md](./CHANGELOG.md)
+
+## 📞 支持
+
+- 如果你遇到问题，请提交 [Issue](https://github.com/Xiabaiyou/wot-ui-intellisense/issues)
+- 如果你想贡献代码，请查看 [贡献指南](./.github/CONTRIBUTING.md)
+
+## 📄 许可证
+
+本项目基于 [MIT](https://zh.wikipedia.org/wiki/MIT%E8%A8%B1%E5%8F%AF%E8%AD%89) 协议

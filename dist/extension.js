@@ -48,29 +48,38 @@ const schema_loader_1 = __webpack_require__(4);
 const component_factory_1 = __webpack_require__(8);
 async function registerAll(context) {
     console.log(`Registering ${component_map_1.COMPONENT_MAP.length} components`);
-    // 动态注册所有组件
-    for (const { tag, docSource } of component_map_1.COMPONENT_MAP) {
-        try {
-            // 修复模块路径计算
-            const componentName = tag.replace('wd-', '');
-            // 使用通用组件提供者
-            const componentMeta = (0, schema_loader_1.loadComponentSchema)(componentName, docSource);
-            const provider = new component_factory_1.GenericComponentCompletionProvider(tag, componentMeta);
-            const hover = new component_factory_1.GenericComponentHoverProvider(tag, componentMeta);
-            // 修复选择器，使其正确匹配组件标签
-            const selector = [
-                { language: "vue", scheme: "file" },
-                { language: "html", scheme: "file" }
-            ];
-            context.subscriptions.push(vscode.languages.registerCompletionItemProvider(selector, provider, ...component_map_1.DEFAULT_TRIGGERS));
-            context.subscriptions.push(vscode.languages.registerHoverProvider(selector, hover));
-            console.log(`Successfully registered ${tag}`);
+    try {
+        // 使用统一的组件补全提供者
+        const unifiedProvider = new component_factory_1.UnifiedComponentCompletionProvider();
+        const selector = [
+            { language: "vue", scheme: "file" },
+            { language: "html", scheme: "file" },
+        ];
+        context.subscriptions.push(vscode.languages.registerCompletionItemProvider(selector, unifiedProvider, "<", " ", ":", "@" // 触发字符
+        ));
+        console.log("Successfully registered unified completion provider");
+        // 保留原有的悬停提供者（可以保持每个组件一个实例）
+        for (const { tag, docSource } of component_map_1.COMPONENT_MAP) {
+            try {
+                const componentName = tag.replace("wd-", "");
+                const componentMeta = (0, schema_loader_1.loadComponentSchema)(componentName, docSource);
+                const hover = new component_factory_1.GenericComponentHoverProvider(tag, componentMeta);
+                const selector = [
+                    { language: "vue", scheme: "file" },
+                    { language: "html", scheme: "file" },
+                ];
+                context.subscriptions.push(vscode.languages.registerHoverProvider(selector, hover));
+                console.log(`Successfully registered hover for ${tag}`);
+            }
+            catch (error) {
+                console.error(`Failed to register hover for ${tag}:`, error);
+            }
         }
-        catch (error) {
-            console.error(`Failed to register ${tag}:`, error);
-        }
+        console.log(`Finished registering components`);
     }
-    console.log(`Finished registering components`);
+    catch (error) {
+        console.error("Failed to register unified completion provider:", error);
+    }
 }
 
 
@@ -82,15 +91,11 @@ module.exports = require("vscode");
 
 /***/ }),
 /* 3 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DEFAULT_TRIGGERS = exports.COMPONENT_MAP = void 0;
-exports.loadComponentProviders = loadComponentProviders;
-const schema_loader_1 = __webpack_require__(4);
-const component_factory_1 = __webpack_require__(8);
-// 组件映射表
 // 组件映射表
 exports.COMPONENT_MAP = [
     { tag: "wd-action-sheet" },
@@ -191,33 +196,6 @@ exports.COMPONENT_MAP = [
 ];
 // 默认触发字符
 exports.DEFAULT_TRIGGERS = ["<", " ", ":", '"', "'"];
-// 动态导入所有组件提供者
-async function loadComponentProviders(tag, modulePath) {
-    try {
-        const componentName = tag.replace("wd-", "");
-        // 查找组件配置
-        const componentConfig = exports.COMPONENT_MAP.find((item) => item.tag === tag);
-        // 传递文档来源参数
-        const componentMeta = (0, schema_loader_1.loadComponentSchema)(componentName, componentConfig?.docSource);
-        return {
-            provider: new component_factory_1.GenericComponentCompletionProvider(tag, componentMeta),
-            hover: new component_factory_1.GenericComponentHoverProvider(tag, componentMeta),
-        };
-    }
-    catch (error) {
-        console.error(`Failed to load component providers for ${tag}:`, error);
-        throw error;
-    }
-}
-// 根据标签名获取类名
-function getComponentClassName(tag) {
-    // 移除 'wd-' 前缀并转换为大驼峰命名
-    return tag
-        .substring(3)
-        .split("-")
-        .map((word) => word.charAt(0).toUpperCase() + word.substring(1))
-        .join("");
-}
 
 
 /***/ }),
@@ -375,10 +353,12 @@ function processComponentProp(prop) {
     }
     const result = [];
     // 处理复合属性名，如 'v-model / modelValue' 或 'modelValue / v-model' 等
-    const propNames = prop[0].split('/').map(name => name.trim().replace(/`/g, ''));
-    const normalizedNames = propNames.map(name => {
+    const propNames = prop[0]
+        .split("/")
+        .map((name) => name.trim().replace(/`/g, ""));
+    const normalizedNames = propNames.map((name) => {
         // 标准化属性名，移除反引号
-        return name.replace(/`/g, '');
+        return name.replace(/`/g, "");
     });
     // 添加所有属性名作为独立属性
     normalizedNames.forEach((name, index) => {
@@ -386,23 +366,34 @@ function processComponentProp(prop) {
             name: name,
             type,
             values,
-            description: index === 0 ? (prop[1] || "") : `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+            description: index === 0
+                ? prop[1] || ""
+                : `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
             default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
             version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
         });
     });
     // 检查是否包含v-model相关属性名
-    const hasVModel = normalizedNames.some(name => name === "v-model" || name === "modelValue" || name === "model-value");
+    const hasVModel = normalizedNames.some((name) => name === "v-model" || name === "modelValue" || name === "model-value");
     // 如果包含v-model相关属性，确保三种形式都存在
     if (hasVModel) {
         const existingNames = new Set(normalizedNames);
         const vModelForms = [
-            { name: "v-model", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
-            { name: "model-value", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
-            { name: "modelValue", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` }
+            {
+                name: "v-model",
+                description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+            },
+            {
+                name: "model-value",
+                description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+            },
+            {
+                name: "modelValue",
+                description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
+            },
         ];
         // 确保所有v-model形式都存在
-        vModelForms.forEach(form => {
+        vModelForms.forEach((form) => {
             if (!existingNames.has(form.name)) {
                 result.push({
                     name: form.name,
@@ -544,11 +535,13 @@ function parseComponentMarkdown(componentName, docSource) {
  * @returns             表格数据数组
  */
 function extractTableSection(content, sectionTitle, componentName) {
-    const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     /* 公用：从第一个 '|' 到 '\n\n'，再去掉表头 */
     const sliceTable = (src, from) => {
         const end = src.indexOf('\n\n', from);
-        const raw = src.substring(from, end === -1 ? src.length : end);
+        let raw = src.substring(from, end === -1 ? src.length : end);
+        // 预处理：移除HTML标签，保留标签内的文本内容
+        raw = raw.replace(/<[^>]+>/g, '');
         const lines = raw.split('\n').filter(l => l.trim() && l.includes('|'));
         if (lines.length < 3)
             return [];
@@ -559,13 +552,13 @@ function extractTableSection(content, sectionTitle, componentName) {
     /* ===== 1. 精确匹配：整行等于 "## PascalCase Attributes" ===== */
     if (componentName) {
         const pascal = componentName
-            .split('-')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join('');
-        const exactReg = new RegExp(`(?:^|\\n)#{2,3}\\s*${pascal}\\s+${escape(sectionTitle)}\\s*$`, 'im');
+            .split("-")
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join("");
+        const exactReg = new RegExp(`(?:^|\\n)#{2,3}\\s*${pascal}\\s+${escape(sectionTitle)}\\s*$`, "im");
         const m = exactReg.exec(content);
         if (m) {
-            const pipe = content.indexOf('|', m.index + m[0].length);
+            const pipe = content.indexOf("|", m.index + m[0].length);
             if (pipe !== -1)
                 return sliceTable(content, pipe);
         }
@@ -573,22 +566,22 @@ function extractTableSection(content, sectionTitle, componentName) {
     /* ===== 2. 模糊匹配：行内包含组件名+标题 ===== */
     if (componentName) {
         const pascal = componentName
-            .split('-')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join('');
-        const fuzzyReg = new RegExp(`(?:^|\\n)#{2,3}\\s*\\w*${pascal}\\w*\\s+${escape(sectionTitle)}\\s*$`, 'im');
+            .split("-")
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join("");
+        const fuzzyReg = new RegExp(`(?:^|\\n)#{2,3}\\s*\\w*${pascal}\\w*\\s+${escape(sectionTitle)}\\s*$`, "im");
         const m = fuzzyReg.exec(content);
         if (m) {
-            const pipe = content.indexOf('|', m.index + m[0].length);
+            const pipe = content.indexOf("|", m.index + m[0].length);
             if (pipe !== -1)
                 return sliceTable(content, pipe);
         }
     }
     /* ===== 3. 通用回落：纯 "## Attributes" ===== */
-    const normalReg = new RegExp(`(?:^|\\n)#{2,3}\\s*${escape(sectionTitle)}\\s*$`, 'im');
+    const normalReg = new RegExp(`(?:^|\\n)#{2,3}\\s*${escape(sectionTitle)}\\s*$`, "im");
     const m = normalReg.exec(content);
     if (m) {
-        const pipe = content.indexOf('|', m.index + m[0].length);
+        const pipe = content.indexOf("|", m.index + m[0].length);
         if (pipe !== -1)
             return sliceTable(content, pipe);
     }
@@ -762,26 +755,11 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GenericComponentDiagnosticProvider = exports.GenericComponentHoverProvider = exports.GenericComponentCompletionProvider = void 0;
+exports.UnifiedComponentCompletionProvider = exports.GenericComponentHoverProvider = void 0;
 const vscode = __importStar(__webpack_require__(2));
 const index_1 = __webpack_require__(9);
-/**
- * 通用组件完成项提供者
- */
-class GenericComponentCompletionProvider extends index_1.ComponentCompletionProvider {
-    componentName;
-    componentMeta;
-    constructor(componentName, componentMeta) {
-        super();
-        this.componentName = componentName;
-        this.componentMeta = componentMeta;
-    }
-    getTagSnippet(isKebab = true) {
-        const tagName = isKebab ? this.componentName : this.componentName.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-        return new vscode.SnippetString(`${tagName}$0></${tagName}>`);
-    }
-}
-exports.GenericComponentCompletionProvider = GenericComponentCompletionProvider;
+const component_map_1 = __webpack_require__(3);
+const schema_loader_1 = __webpack_require__(4);
 /**
  * 通用组件悬停提供者
  */
@@ -795,22 +773,194 @@ class GenericComponentHoverProvider extends index_1.ComponentHoverProvider {
     }
 }
 exports.GenericComponentHoverProvider = GenericComponentHoverProvider;
-/**
- * 通用组件诊断提供者
- */
-class GenericComponentDiagnosticProvider extends index_1.ComponentDiagnosticProvider {
-    componentName;
-    componentMeta;
-    constructor(componentName, componentMeta) {
-        super();
-        this.componentName = componentName;
-        this.componentMeta = componentMeta;
+// 统一的组件补全提供者
+class UnifiedComponentCompletionProvider {
+    componentMap = new Map();
+    constructor() {
+        // 初始化所有组件的元数据
+        for (const { tag, docSource } of component_map_1.COMPONENT_MAP) {
+            try {
+                const componentName = tag.replace("wd-", "");
+                const componentMeta = (0, schema_loader_1.loadComponentSchema)(componentName, docSource);
+                this.componentMap.set(tag, componentMeta);
+                this.componentMap.set(componentName, componentMeta); // 同时支持驼峰式
+            }
+            catch (error) {
+                console.error(`加载 ${tag}失败:`, error);
+            }
+        }
     }
-    getAdditionalDiagnostics(tag, range, diagnostics) {
-        // 默认实现不添加额外诊断
+    provideCompletionItems(document, position) {
+        const linePrefix = document
+            .lineAt(position)
+            .text.substring(0, position.character);
+        // 1. 检查是否是标签补全上下文（如 <wd-bu）
+        const tagCompletionMatch = linePrefix.match(/<([a-zA-Z0-9-]*)$/);
+        if (tagCompletionMatch) {
+            return this.provideTagCompletionItems(tagCompletionMatch[1] || "");
+        }
+        // 2. 检查是否是属性补全上下文
+        const currentTagName = this.getCurrentTagName(document, position);
+        if (currentTagName) {
+            // 尝试匹配完整标签名（wd-button 或 button）
+            const componentMeta = this.componentMap.get(currentTagName) ||
+                this.componentMap.get(`wd-${currentTagName}`) ||
+                this.componentMap.get(currentTagName.replace(/^wd-/, ""));
+            if (componentMeta) {
+                return this.provideAttributeCompletionItems(componentMeta, document, position);
+            }
+        }
+        return [];
+    }
+    provideTagCompletionItems(filter) {
+        const items = [];
+        for (const [tagName, componentMeta] of this.componentMap.entries()) {
+            // 只处理 wd- 前缀的标签名
+            if (tagName.startsWith("wd-") && (!filter || tagName.includes(filter))) {
+                const item = new vscode.CompletionItem(tagName, vscode.CompletionItemKind.Class);
+                item.documentation = new vscode.MarkdownString(componentMeta.documentation);
+                item.insertText = new vscode.SnippetString(`${tagName}$0></${tagName}>`);
+                item.label = {
+                    label: tagName,
+                    description: "Wot UI IntelliSense",
+                };
+                item.sortText = "0";
+                item.preselect = true;
+                item.kind = vscode.CompletionItemKind.Snippet;
+                item.command = {
+                    command: "editor.action.triggerSuggest",
+                    title: "",
+                };
+                items.push(item);
+            }
+        }
+        return items;
+    }
+    provideAttributeCompletionItems(componentMeta, document, position) {
+        // 检查是否在属性上下文中
+        if (!this.isInAttributeContext(document, position)) {
+            return [];
+        }
+        const items = [];
+        // 静态属性补全
+        componentMeta.props.forEach((prop) => {
+            // // 驼峰式属性
+            // const camelItem = new vscode.CompletionItem(
+            //   prop.name,
+            //   vscode.CompletionItemKind.Property
+            // );
+            // camelItem.documentation = prop.description;
+            // if (prop.type === "enum") {
+            //   camelItem.insertText = new vscode.SnippetString(
+            //     `${prop.name}="\${1|${prop.values!.join(",")}|}"`
+            //   );
+            // } else if (prop.type === "boolean") {
+            //   camelItem.insertText = new vscode.SnippetString(
+            //     `${prop.name}="\${1|true,false|}"`
+            //   );
+            // } else {
+            //   camelItem.insertText = new vscode.SnippetString(`${prop.name}="$1"`);
+            // }
+            // camelItem.label = {
+            //   label: prop.name,
+            //   description: "Wot UI IntelliSense",
+            // };
+            // camelItem.sortText = '0';
+            // camelItem.preselect = true;
+            // camelItem.kind = vscode.CompletionItemKind.Snippet;
+            // camelItem.command = {
+            //   command: "editor.action.triggerSuggest",
+            //   title: "",
+            // };
+            // items.push(camelItem);
+            // 短横线式属性
+            const kebabName = prop.name.replace(/([A-Z])/g, "-$1").toLowerCase();
+            const kebabItem = new vscode.CompletionItem(kebabName, vscode.CompletionItemKind.Property);
+            kebabItem.documentation = prop.description;
+            if (prop.type === "enum") {
+                kebabItem.insertText = new vscode.SnippetString(`${kebabName}="\${1|${prop.values.join(",")}|}"`);
+            }
+            else if (prop.type === "boolean") {
+                kebabItem.insertText = new vscode.SnippetString(`${kebabName}="\${1|true,false|}"`);
+            }
+            else {
+                kebabItem.insertText = new vscode.SnippetString(`${kebabName}="$1"`);
+            }
+            kebabItem.label = {
+                label: kebabName,
+                description: "Wot UI IntelliSense",
+            };
+            kebabItem.sortText = '0';
+            kebabItem.preselect = true;
+            kebabItem.kind = vscode.CompletionItemKind.Snippet;
+            kebabItem.command = {
+                command: "editor.action.triggerSuggest",
+                title: "",
+            };
+            items.push(kebabItem);
+        });
+        // 事件补全
+        componentMeta.events?.forEach((event) => {
+            // @事件
+            const eventItem = new vscode.CompletionItem(`@${event.name}`, vscode.CompletionItemKind.Event);
+            eventItem.documentation = event.description;
+            eventItem.insertText = new vscode.SnippetString(`@${event.name}="$1"`);
+            items.push(eventItem);
+            // 短横线式事件
+            const kebabEventName = event.name
+                .replace(/([A-Z])/g, "-$1")
+                .toLowerCase();
+            const kebabEventItem = new vscode.CompletionItem(`@${kebabEventName}`, vscode.CompletionItemKind.Event);
+            kebabEventItem.documentation = event.description;
+            kebabEventItem.insertText = new vscode.SnippetString(`@${kebabEventName}="$1"`);
+            kebabEventItem.label = {
+                label: `@${kebabEventName}`,
+                description: "Wot UI IntelliSense",
+            };
+            kebabEventItem.sortText = '0';
+            kebabEventItem.preselect = true;
+            kebabEventItem.kind = vscode.CompletionItemKind.Snippet;
+            kebabEventItem.command = {
+                command: "editor.action.triggerSuggest",
+                title: "",
+            };
+            items.push(kebabEventItem);
+        });
+        return items;
+    }
+    getCurrentTagName(document, position) {
+        const lineText = document.lineAt(position).text;
+        const beforeCursor = lineText.substring(0, position.character);
+        // 找到最近的标签开始
+        const tagStartIndex = beforeCursor.lastIndexOf("<");
+        const tagEndIndex = beforeCursor.lastIndexOf(">");
+        if (tagStartIndex === -1 || tagStartIndex < tagEndIndex) {
+            return null;
+        }
+        // 提取标签名（支持不完整的标签）
+        const tagContent = beforeCursor.substring(tagStartIndex + 1);
+        const tagNameMatch = tagContent.match(/^([a-zA-Z0-9-]+)/);
+        // 如果光标在标签内部，但标签尚未闭合
+        if (tagNameMatch) {
+            return tagNameMatch[1];
+        }
+        return null;
+    }
+    isInAttributeContext(document, position) {
+        const lineText = document.lineAt(position).text;
+        const beforeCursor = lineText.substring(0, position.character);
+        // 标签开始后且未闭合，且不在引号内
+        const tagStartIndex = beforeCursor.lastIndexOf("<");
+        const tagEndIndex = beforeCursor.lastIndexOf(">");
+        if (tagStartIndex === -1 || tagStartIndex < tagEndIndex) {
+            return false;
+        }
+        // 检查引号是否闭合
+        const quoteCount = (beforeCursor.match(/["']/g) || []).length;
+        return quoteCount % 2 === 0;
     }
 }
-exports.GenericComponentDiagnosticProvider = GenericComponentDiagnosticProvider;
+exports.UnifiedComponentCompletionProvider = UnifiedComponentCompletionProvider;
 
 
 /***/ }),
@@ -852,7 +1002,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ComponentDiagnosticProvider = exports.ComponentHoverProvider = exports.ComponentCompletionProvider = void 0;
+exports.ComponentDiagnosticProvider = exports.ComponentHoverProvider = void 0;
 exports.isOnTagName = isOnTagName;
 exports.getAttributeInfoAtPosition = getAttributeInfoAtPosition;
 const vscode = __importStar(__webpack_require__(2));
@@ -967,161 +1117,6 @@ function getAttributeInfoAtPosition(document, position) {
     }
     return null;
 }
-// ======================== 补全提供者 ========================
-/**
- * 通用组件完成项提供者基类（支持驼峰和短横线式属性）
- */
-class ComponentCompletionProvider {
-    provideCompletionItems(document, position) {
-        const linePrefix = document
-            .lineAt(position)
-            .text.substring(0, position.character);
-        // 1. 组件标签补全（支持驼峰和短横线式）
-        const kebabComponentName = camelToKebab(this.componentName);
-        const tagRegex = new RegExp(`<(${this.componentName.replace(/-/g, "(-)?")}|${kebabComponentName}(\\s+[^>]*)?)?$`);
-        const matchResult = linePrefix.match(tagRegex);
-        if (matchResult) {
-            // 创建两种形式的标签补全
-            const items = [];
-            // 短横线式标签
-            const kebabItem = new vscode.CompletionItem(kebabComponentName, // 添加测试前缀使其更明显
-            vscode.CompletionItemKind.Class);
-            kebabItem.documentation = new vscode.MarkdownString(this.componentMeta.documentation);
-            kebabItem.label = {
-                label: kebabComponentName,
-                description: 'Wot UI IntelliSense'
-            },
-                kebabItem.insertText = this.getTagSnippet(true);
-            kebabItem.sortText = '0';
-            kebabItem.preselect = true;
-            kebabItem.kind = vscode.CompletionItemKind.Snippet;
-            kebabItem.command = { command: 'editor.action.triggerSuggest', title: '' };
-            items.push(kebabItem);
-            /* 🔑 强制展开详情面板 → 第一次 Ctrl+Space 就能看到 detail */
-            return items;
-        }
-        // 2. 属性补全（增强支持所有Vue写法）
-        const attrContextRegex = new RegExp(`<(${this.componentName}|${kebabComponentName})\\b[^>]*$`);
-        const eventContextRegex = /(@|v-on:)[a-zA-Z0-9-]*$/;
-        const dynamicAttrContextRegex = /(:|v-bind:)[a-zA-Z0-9-]*$/;
-        if (linePrefix.match(attrContextRegex)) {
-            const items = [];
-            // 静态属性补全（同时提供驼峰式和短横线式）
-            this.componentMeta.props.forEach((prop) => {
-                // 驼峰式补全项
-                const camelItem = this.createPropCompletionItem(prop, false);
-                items.push(camelItem);
-                // 短横线式补全项
-                const kebabItem = this.createPropCompletionItem(prop, true);
-                items.push(kebabItem);
-            });
-            // 动态属性补全（同时提供两种形式）
-            this.componentMeta.props.forEach((prop) => {
-                // 驼峰式动态绑定
-                const camelDynamicItem = this.createDynamicPropItem(prop, false);
-                items.push(camelDynamicItem);
-                // 短横线式动态绑定
-                const kebabDynamicItem = this.createDynamicPropItem(prop, true);
-                items.push(kebabDynamicItem);
-            });
-            // 事件补全（同时提供两种形式）
-            this.componentMeta.events?.forEach((event) => {
-                // 驼峰式事件
-                const camelEventItem = this.createEventItem(event, false);
-                items.push(camelEventItem);
-                // 短横线式事件
-                const kebabEventItem = this.createEventItem(event, true);
-                items.push(kebabEventItem);
-            });
-            return items;
-        }
-        // 3. 事件上下文补全（当输入@或v-on:时）
-        if (linePrefix.match(eventContextRegex)) {
-            const items = [];
-            this.componentMeta.events?.forEach((event) => {
-                // 驼峰式事件名
-                const camelItem = new vscode.CompletionItem(event.name, vscode.CompletionItemKind.Event);
-                camelItem.documentation = event.description;
-                camelItem.insertText = new vscode.SnippetString(`${event.name}="\${1:handler}"`);
-                camelItem.detail = "驼峰式事件";
-                items.push(camelItem);
-                // 短横线式事件名
-                const kebabItem = new vscode.CompletionItem(camelToKebab(event.name), vscode.CompletionItemKind.Event);
-                kebabItem.documentation = event.description;
-                kebabItem.insertText = new vscode.SnippetString(`${camelToKebab(event.name)}="\${1:handler}"`);
-                kebabItem.detail = "短横线式事件";
-                items.push(kebabItem);
-            });
-            return items;
-        }
-        // 4. 动态属性上下文补全（当输入:或v-bind:时）
-        if (linePrefix.match(dynamicAttrContextRegex)) {
-            const items = [];
-            this.componentMeta.props.forEach((prop) => {
-                // 驼峰式属性名
-                const camelItem = new vscode.CompletionItem(prop.name, vscode.CompletionItemKind.Property);
-                camelItem.documentation = prop.description;
-                camelItem.insertText = new vscode.SnippetString(`${prop.name}="\${1:value}"`);
-                camelItem.detail = "驼峰式属性";
-                items.push(camelItem);
-                // 短横线式属性名
-                const kebabItem = new vscode.CompletionItem(camelToKebab(prop.name), vscode.CompletionItemKind.Property);
-                kebabItem.documentation = prop.description;
-                kebabItem.insertText = new vscode.SnippetString(`${camelToKebab(prop.name)}="\${1:value}"`);
-                kebabItem.detail = "短横线式属性";
-                items.push(kebabItem);
-            });
-            return items;
-        }
-        return [];
-    }
-    // 创建属性补全项（支持两种命名方式）
-    createPropCompletionItem(prop, isKebabCase) {
-        const propName = isKebabCase ? camelToKebab(prop.name) : prop.name;
-        const item = new vscode.CompletionItem(propName, vscode.CompletionItemKind.Property);
-        item.documentation = prop.description;
-        item.detail = isKebabCase ? "短横线式属性" : "驼峰式属性";
-        if (prop.type === "enum") {
-            item.insertText = new vscode.SnippetString(`${propName}="\${1|${prop.values.join(",")}|}"`);
-        }
-        else if (prop.type === "boolean") {
-            // 布尔属性支持简写（仅驼峰式）
-            if (!isKebabCase) {
-                const booleanItem = new vscode.CompletionItem(prop.name, vscode.CompletionItemKind.Property);
-                booleanItem.documentation = prop.description;
-                booleanItem.insertText = prop.name;
-                booleanItem.detail = "驼峰式属性（简写）";
-                return booleanItem;
-            }
-            item.insertText = new vscode.SnippetString(`${propName}="\${1|true,false|}"`);
-        }
-        else {
-            item.insertText = new vscode.SnippetString(`${propName}="$1"`);
-        }
-        return item;
-    }
-    // 创建动态属性补全项
-    createDynamicPropItem(prop, isKebabCase) {
-        const propName = isKebabCase ? camelToKebab(prop.name) : prop.name;
-        const prefix = ":";
-        const item = new vscode.CompletionItem(`${prefix}${propName}`, vscode.CompletionItemKind.Property);
-        item.documentation = new vscode.MarkdownString(`**动态绑定** (${isKebabCase ? "短横线式" : "驼峰式"})\n\n${prop.description}\n\n类型: ${prop.type}`);
-        item.insertText = new vscode.SnippetString(`${prefix}${propName}="\${1:value}"`);
-        item.detail = isKebabCase ? "短横线式动态属性" : "驼峰式动态属性";
-        return item;
-    }
-    // 创建事件补全项
-    createEventItem(event, isKebabCase) {
-        const eventName = isKebabCase ? camelToKebab(event.name) : event.name;
-        const prefix = "@";
-        const item = new vscode.CompletionItem(`${prefix}${eventName}`, vscode.CompletionItemKind.Event);
-        item.documentation = new vscode.MarkdownString(`**事件** (${isKebabCase ? "短横线式" : "驼峰式"})\n\n${event.description}`);
-        item.insertText = new vscode.SnippetString(`${prefix}${eventName}="\${1:handler}"`);
-        item.detail = isKebabCase ? "短横线式事件" : "驼峰式事件";
-        return item;
-    }
-}
-exports.ComponentCompletionProvider = ComponentCompletionProvider;
 // ======================== 悬停提供者 ========================
 /**
  * 通用组件悬停提供者基类（支持驼峰和短横线式属性）
