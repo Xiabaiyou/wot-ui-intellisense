@@ -71,12 +71,6 @@ function processComponentProp(prop: string[]): Array<{
     }
   }
 
-  // 特殊处理scope属性，它有明确的类型ButtonScope
-  if (prop[0] === "scope") {
-    type = "enum";
-    values = ["phoneNumber", "userInfo"];
-  }
-
   const result: Array<{
     name: string;
     type: string;
@@ -113,44 +107,26 @@ function processComponentProp(prop: string[]): Array<{
   // 如果包含v-model相关属性，确保三种形式都存在
   if (hasVModel) {
     const existingNames = new Set(normalizedNames);
+    const vModelForms = [
+      { name: "v-model", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
+      { name: "model-value", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
+      { name: "modelValue", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` }
+    ];
     
-    // 确保 v-model 存在
-    if (!existingNames.has("v-model")) {
-      result.push({
-        name: "v-model",
-        type,
-        values,
-        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
-        default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-        version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-      });
-    }
-    
-    // 确保 model-value 存在
-    if (!existingNames.has("model-value")) {
-      result.push({
-        name: "model-value",
-        type,
-        values,
-        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
-        default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-        version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-      });
-    }
-    
-    // 确保 modelValue 存在
-    if (!existingNames.has("modelValue")) {
-      result.push({
-        name: "modelValue",
-        type,
-        values,
-        description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
-        default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-        version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-      });
-    }
+    // 确保所有v-model形式都存在
+    vModelForms.forEach(form => {
+      if (!existingNames.has(form.name)) {
+        result.push({
+          name: form.name,
+          type,
+          values,
+          description: form.description,
+          default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
+          version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
+        });
+      }
+    });
   }
-
   return result;
 }
 

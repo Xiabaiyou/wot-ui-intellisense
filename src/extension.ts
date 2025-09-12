@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
 import { registerAll } from './providers/index';
 
-export function activate(context: vscode.ExtensionContext) {
-  console.log('Wot Uni Helper 已激活');
-  registerAll(context);
+export async function activate(context: vscode.ExtensionContext) {
+  console.log('🚀 Wot UI IntelliSense 插件已激活!');
+  console.log('正在注册组件...');
+  
+  await registerAll(context);
+  
+  console.log('✅ Wot UI IntelliSense 插件注册完成!');
 }
-
-export function deactivate() {}
+export async function deactivate() {
+  console.log('🚫 Wot UI IntelliSense 插件已停用!');
+}

@@ -3,7 +3,7 @@
   "displayName": "wot-ui-intellisense",
   "publisher": "baiyou",
   "description": "",
-  "version": "0.0.4",
+  "version": "0.0.1",
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -29,7 +29,21 @@
         "command": "wot-ui-intellisense.refreshComponents",
         "title": "Refresh Wot UI Components"
       }
-    ]
+    ],
+    "languages": [
+      {
+        "id": "vue",
+        "extensions": [".vue"],
+        "aliases": ["Vue", "vue"]
+      },
+      {
+        "id": "html",
+        "extensions": [".html"],
+        "aliases": ["HTML", "html"]
+      }
+    ],
+    "grammars": [],
+    "configuration": {}
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

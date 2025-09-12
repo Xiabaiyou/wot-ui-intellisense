@@ -19,6 +19,7 @@ export class GenericComponentCompletionProvider extends ComponentCompletionProvi
     const tagName = isKebab ? this.componentName : this.componentName.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
     return new vscode.SnippetString(`${tagName}$0></${tagName}>`);
   }
+  
 }
 
 /**

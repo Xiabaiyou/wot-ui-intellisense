@@ -1,14 +1,14 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 // ======================== 工具函数 ========================
 // 转义正则表达式特殊字符
 function escapeRegExp(str: string) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // 驼峰式转短横线式
 function camelToKebab(str: string): string {
-  return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+  return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, "$1-$2").toLowerCase();
 }
 
 // 短横线式转驼峰式
@@ -31,7 +31,7 @@ export function isOnTagName(
   // 1. 向左查找 '<'
   let tagStart = -1;
   for (let i = cursorOffset; i >= 0; i--) {
-    if (lineText[i] === '<') {
+    if (lineText[i] === "<") {
       tagStart = i;
       break;
     }
@@ -40,18 +40,20 @@ export function isOnTagName(
 
   // 2. 同时匹配驼峰和短横线式
   const kebabTagName = camelToKebab(tagName);
-  const tagRegex = new RegExp(`^<\\/?(${escapeRegExp(tagName)}|${escapeRegExp(kebabTagName)})`);
-  
+  const tagRegex = new RegExp(
+    `^<\\/?(${escapeRegExp(tagName)}|${escapeRegExp(kebabTagName)})`
+  );
+
   const tagPrefix = lineText.substring(tagStart);
   const match = tagPrefix.match(tagRegex);
-  
+
   if (!match) return false;
-  
+
   // 3. 计算标签名的实际位置范围
   const actualTagName = match[1];
   const actualTagStart = tagStart + match[0].indexOf(actualTagName);
   const actualTagEnd = actualTagStart + actualTagName.length;
-  
+
   // 4. 检查光标是否在标签名范围内
   return cursorOffset >= actualTagStart && cursorOffset < actualTagEnd;
 }
@@ -62,8 +64,12 @@ export function isOnTagName(
 export function getAttributeInfoAtPosition(
   document: vscode.TextDocument,
   position: vscode.Position
-): { attrName: string; tagName: string; isEvent: boolean; isDynamic: boolean } | null {
-
+): {
+  attrName: string;
+  tagName: string;
+  isEvent: boolean;
+  isDynamic: boolean;
+} | null {
   /* ---------- 1. 找到标签开始、结束位置（跨行） ---------- */
   let openAngle = -1;
   // 向前找最近的 <
@@ -71,7 +77,7 @@ export function getAttributeInfoAtPosition(
     const txt = document.lineAt(line).text;
     const col = line === position.line ? position.character : txt.length - 1;
     for (let i = col; i >= 0; i--) {
-      if (txt[i] === '<') {
+      if (txt[i] === "<") {
         openAngle = document.offsetAt(new vscode.Position(line, i));
         break;
       }
@@ -82,11 +88,15 @@ export function getAttributeInfoAtPosition(
 
   let closeAngle = -1;
   // 向后找最近的 >
-  for (let line = position.line, lineCount = document.lineCount; line < lineCount; line++) {
+  for (
+    let line = position.line, lineCount = document.lineCount;
+    line < lineCount;
+    line++
+  ) {
     const txt = document.lineAt(line).text;
     const startCol = line === position.line ? position.character : 0;
     for (let i = startCol; i < txt.length; i++) {
-      if (txt[i] === '>') {
+      if (txt[i] === ">") {
         closeAngle = document.offsetAt(new vscode.Position(line, i)) + 1;
         break;
       }
@@ -96,7 +106,10 @@ export function getAttributeInfoAtPosition(
   if (closeAngle === -1) return null; // 没找到闭合
 
   /* ---------- 2. 取出完整标签文本 ---------- */
-  const tagRange = new vscode.Range(document.positionAt(openAngle), document.positionAt(closeAngle));
+  const tagRange = new vscode.Range(
+    document.positionAt(openAngle),
+    document.positionAt(closeAngle)
+  );
   const tagContent = document.getText(tagRange); // 跨行也一次性拿到
 
   /* ---------- 3. 以下是你原来的逻辑 ---------- */
@@ -106,23 +119,24 @@ export function getAttributeInfoAtPosition(
 
   const cursorOffset = document.offsetAt(position) - openAngle; // 光标在 tagContent 里的偏移
   // 改进的正则表达式，支持带值的属性
-  const attrRegex = /(?:v-bind:|v-on:|@|:)?([a-zA-Z0-9-_.]+)(?:=("[^"]*"|'[^']*'|[^>\s]*))?/g;
+  const attrRegex =
+    /(?:v-bind:|v-on:|@|:)?([a-zA-Z0-9-_.]+)(?:=("[^"]*"|'[^']*'|[^>\s]*))?/g;
   let match;
-  
+
   while ((match = attrRegex.exec(tagContent)) !== null) {
     const fullMatch = match[0];
     const rawAttrName = match[1];
     // 使用原始属性名（保持kebab-case格式）
     const attrName = rawAttrName;
     const attrStart = match.index;
-    const attrEnd   = attrStart + fullMatch.length;
-    
+    const attrEnd = attrStart + fullMatch.length;
+
     if (cursorOffset >= attrStart && cursorOffset <= attrEnd) {
       return {
         attrName, // 保持原始格式用于匹配
         tagName,
-        isEvent: fullMatch.startsWith('@') || fullMatch.startsWith('v-on:'),
-        isDynamic: fullMatch.startsWith(':') || fullMatch.startsWith('v-bind:'),
+        isEvent: fullMatch.startsWith("@") || fullMatch.startsWith("v-on:"),
+        isDynamic: fullMatch.startsWith(":") || fullMatch.startsWith("v-bind:"),
       };
     }
   }
@@ -133,7 +147,9 @@ export function getAttributeInfoAtPosition(
 /**
  * 通用组件完成项提供者基类（支持驼峰和短横线式属性）
  */
-export abstract class ComponentCompletionProvider implements vscode.CompletionItemProvider {
+export abstract class ComponentCompletionProvider
+implements vscode.CompletionItemProvider
+{
   protected abstract componentName: string;
   protected abstract componentMeta: any;
 
@@ -141,86 +157,98 @@ export abstract class ComponentCompletionProvider implements vscode.CompletionIt
     document: vscode.TextDocument,
     position: vscode.Position
   ): vscode.ProviderResult<vscode.CompletionItem[]> {
-    const linePrefix = document.lineAt(position).text.substring(0, position.character);
+    const linePrefix = document
+      .lineAt(position)
+      .text.substring(0, position.character);
 
     // 1. 组件标签补全（支持驼峰和短横线式）
     const kebabComponentName = camelToKebab(this.componentName);
-    const tagRegex = new RegExp(`<(${this.componentName.replace(/-/g, '(-)?')}|${kebabComponentName}(\\s+[^>]*)?)?$`);
-    if (linePrefix.match(tagRegex)) {
+
+    const tagRegex = new RegExp(
+      `<(${this.componentName.replace(
+        /-/g,
+        "(-)?"
+      )}|${kebabComponentName}(\\s+[^>]*)?)?$`
+    );
+
+    const matchResult = linePrefix.match(tagRegex);
+    
+    if (matchResult) {
       // 创建两种形式的标签补全
       const items: vscode.CompletionItem[] = [];
-      
-      // 驼峰式标签
-      // const camelItem = new vscode.CompletionItem(
-      //   this.componentName,
-      //   vscode.CompletionItemKind.Class
-      // );
-      // camelItem.documentation = new vscode.MarkdownString(this.componentMeta.documentation);
-      // camelItem.insertText = this.getTagSnippet(false);
-      // camelItem.detail = "wot uni 组件 - 驼峰式标签";
-      // items.push(camelItem);
-      
+
       // 短横线式标签
       const kebabItem = new vscode.CompletionItem(
-        kebabComponentName,
+        kebabComponentName, // 添加测试前缀使其更明显
         vscode.CompletionItemKind.Class
       );
-      kebabItem.documentation = new vscode.MarkdownString(this.componentMeta.documentation);
+      kebabItem.documentation = new vscode.MarkdownString(
+        this.componentMeta.documentation
+      );
+      kebabItem.label = {
+        label: kebabComponentName,
+        description: 'Wot UI IntelliSense'
+      },
       kebabItem.insertText = this.getTagSnippet(true);
-      kebabItem.detail = "wot uni 组件";
+      kebabItem.sortText = '0';
+      kebabItem.preselect = true;
+      kebabItem.kind = vscode.CompletionItemKind.Snippet;
+      kebabItem.command = { command: 'editor.action.triggerSuggest', title: '' };
       items.push(kebabItem);
-      
+      /* 🔑 强制展开详情面板 → 第一次 Ctrl+Space 就能看到 detail */
       return items;
     }
 
     // 2. 属性补全（增强支持所有Vue写法）
-    const attrContextRegex = new RegExp(`<(${this.componentName}|${kebabComponentName})\\b[^>]*$`);
+    const attrContextRegex = new RegExp(
+      `<(${this.componentName}|${kebabComponentName})\\b[^>]*$`
+    );
     const eventContextRegex = /(@|v-on:)[a-zA-Z0-9-]*$/;
     const dynamicAttrContextRegex = /(:|v-bind:)[a-zA-Z0-9-]*$/;
-    
+
     if (linePrefix.match(attrContextRegex)) {
       const items: vscode.CompletionItem[] = [];
-      
+
       // 静态属性补全（同时提供驼峰式和短横线式）
       this.componentMeta.props.forEach((prop: any) => {
         // 驼峰式补全项
         const camelItem = this.createPropCompletionItem(prop, false);
         items.push(camelItem);
-        
+
         // 短横线式补全项
         const kebabItem = this.createPropCompletionItem(prop, true);
         items.push(kebabItem);
       });
-      
+
       // 动态属性补全（同时提供两种形式）
       this.componentMeta.props.forEach((prop: any) => {
         // 驼峰式动态绑定
         const camelDynamicItem = this.createDynamicPropItem(prop, false);
         items.push(camelDynamicItem);
-        
+
         // 短横线式动态绑定
         const kebabDynamicItem = this.createDynamicPropItem(prop, true);
         items.push(kebabDynamicItem);
       });
-      
+
       // 事件补全（同时提供两种形式）
       this.componentMeta.events?.forEach((event: any) => {
         // 驼峰式事件
         const camelEventItem = this.createEventItem(event, false);
         items.push(camelEventItem);
-        
+
         // 短横线式事件
         const kebabEventItem = this.createEventItem(event, true);
         items.push(kebabEventItem);
       });
-      
+
       return items;
     }
-    
+
     // 3. 事件上下文补全（当输入@或v-on:时）
     if (linePrefix.match(eventContextRegex)) {
       const items: vscode.CompletionItem[] = [];
-      
+
       this.componentMeta.events?.forEach((event: any) => {
         // 驼峰式事件名
         const camelItem = new vscode.CompletionItem(
@@ -228,28 +256,32 @@ export abstract class ComponentCompletionProvider implements vscode.CompletionIt
           vscode.CompletionItemKind.Event
         );
         camelItem.documentation = event.description;
-        camelItem.insertText = new vscode.SnippetString(`${event.name}="\${1:handler}"`);
+        camelItem.insertText = new vscode.SnippetString(
+          `${event.name}="\${1:handler}"`
+        );
         camelItem.detail = "驼峰式事件";
         items.push(camelItem);
-        
+
         // 短横线式事件名
         const kebabItem = new vscode.CompletionItem(
           camelToKebab(event.name),
           vscode.CompletionItemKind.Event
         );
         kebabItem.documentation = event.description;
-        kebabItem.insertText = new vscode.SnippetString(`${camelToKebab(event.name)}="\${1:handler}"`);
+        kebabItem.insertText = new vscode.SnippetString(
+          `${camelToKebab(event.name)}="\${1:handler}"`
+        );
         kebabItem.detail = "短横线式事件";
         items.push(kebabItem);
       });
-      
+
       return items;
     }
-    
+
     // 4. 动态属性上下文补全（当输入:或v-bind:时）
     if (linePrefix.match(dynamicAttrContextRegex)) {
       const items: vscode.CompletionItem[] = [];
-      
+
       this.componentMeta.props.forEach((prop: any) => {
         // 驼峰式属性名
         const camelItem = new vscode.CompletionItem(
@@ -257,21 +289,25 @@ export abstract class ComponentCompletionProvider implements vscode.CompletionIt
           vscode.CompletionItemKind.Property
         );
         camelItem.documentation = prop.description;
-        camelItem.insertText = new vscode.SnippetString(`${prop.name}="\${1:value}"`);
+        camelItem.insertText = new vscode.SnippetString(
+          `${prop.name}="\${1:value}"`
+        );
         camelItem.detail = "驼峰式属性";
         items.push(camelItem);
-        
+
         // 短横线式属性名
         const kebabItem = new vscode.CompletionItem(
           camelToKebab(prop.name),
           vscode.CompletionItemKind.Property
         );
         kebabItem.documentation = prop.description;
-        kebabItem.insertText = new vscode.SnippetString(`${camelToKebab(prop.name)}="\${1:value}"`);
+        kebabItem.insertText = new vscode.SnippetString(
+          `${camelToKebab(prop.name)}="\${1:value}"`
+        );
         kebabItem.detail = "短横线式属性";
         items.push(kebabItem);
       });
-      
+
       return items;
     }
 
@@ -279,7 +315,10 @@ export abstract class ComponentCompletionProvider implements vscode.CompletionIt
   }
 
   // 创建属性补全项（支持两种命名方式）
-  private createPropCompletionItem(prop: any, isKebabCase: boolean): vscode.CompletionItem {
+  private createPropCompletionItem(
+    prop: any,
+    isKebabCase: boolean
+  ): vscode.CompletionItem {
     const propName = isKebabCase ? camelToKebab(prop.name) : prop.name;
     const item = new vscode.CompletionItem(
       propName,
@@ -287,12 +326,12 @@ export abstract class ComponentCompletionProvider implements vscode.CompletionIt
     );
     item.documentation = prop.description;
     item.detail = isKebabCase ? "短横线式属性" : "驼峰式属性";
-    
-    if (prop.type === 'enum') {
+
+    if (prop.type === "enum") {
       item.insertText = new vscode.SnippetString(
-        `${propName}="\${1|${prop.values!.join(',')}|}"`
+        `${propName}="\${1|${prop.values!.join(",")}|}"`
       );
-    } else if (prop.type === 'boolean') {
+    } else if (prop.type === "boolean") {
       // 布尔属性支持简写（仅驼峰式）
       if (!isKebabCase) {
         const booleanItem = new vscode.CompletionItem(
@@ -304,51 +343,67 @@ export abstract class ComponentCompletionProvider implements vscode.CompletionIt
         booleanItem.detail = "驼峰式属性（简写）";
         return booleanItem;
       }
-      item.insertText = new vscode.SnippetString(`${propName}="\${1|true,false|}"`);
+      item.insertText = new vscode.SnippetString(
+        `${propName}="\${1|true,false|}"`
+      );
     } else {
       item.insertText = new vscode.SnippetString(`${propName}="$1"`);
     }
-    
+
     return item;
   }
 
   // 创建动态属性补全项
-  private createDynamicPropItem(prop: any, isKebabCase: boolean): vscode.CompletionItem {
+  private createDynamicPropItem(
+    prop: any,
+    isKebabCase: boolean
+  ): vscode.CompletionItem {
     const propName = isKebabCase ? camelToKebab(prop.name) : prop.name;
-    const prefix = ':';
-    
+    const prefix = ":";
+
     const item = new vscode.CompletionItem(
       `${prefix}${propName}`,
       vscode.CompletionItemKind.Property
     );
-    
+
     item.documentation = new vscode.MarkdownString(
-      `**动态绑定** (${isKebabCase ? '短横线式' : '驼峰式'})\n\n${prop.description}\n\n类型: ${prop.type}`
+      `**动态绑定** (${isKebabCase ? "短横线式" : "驼峰式"})\n\n${
+        prop.description
+      }\n\n类型: ${prop.type}`
     );
-    
-    item.insertText = new vscode.SnippetString(`${prefix}${propName}="\${1:value}"`);
+
+    item.insertText = new vscode.SnippetString(
+      `${prefix}${propName}="\${1:value}"`
+    );
     item.detail = isKebabCase ? "短横线式动态属性" : "驼峰式动态属性";
-    
+
     return item;
   }
 
   // 创建事件补全项
-  private createEventItem(event: any, isKebabCase: boolean): vscode.CompletionItem {
+  private createEventItem(
+    event: any,
+    isKebabCase: boolean
+  ): vscode.CompletionItem {
     const eventName = isKebabCase ? camelToKebab(event.name) : event.name;
-    const prefix = '@';
-    
+    const prefix = "@";
+
     const item = new vscode.CompletionItem(
       `${prefix}${eventName}`,
       vscode.CompletionItemKind.Event
     );
-    
+
     item.documentation = new vscode.MarkdownString(
-      `**事件** (${isKebabCase ? '短横线式' : '驼峰式'})\n\n${event.description}`
+      `**事件** (${isKebabCase ? "短横线式" : "驼峰式"})\n\n${
+        event.description
+      }`
     );
-    
-    item.insertText = new vscode.SnippetString(`${prefix}${eventName}="\${1:handler}"`);
+
+    item.insertText = new vscode.SnippetString(
+      `${prefix}${eventName}="\${1:handler}"`
+    );
     item.detail = isKebabCase ? "短横线式事件" : "驼峰式事件";
-    
+
     return item;
   }
 
@@ -368,11 +423,12 @@ export abstract class ComponentHoverProvider implements vscode.HoverProvider {
     position: vscode.Position
   ): vscode.ProviderResult<vscode.Hover> {
     try {
-      
       // 1. 检查是否在标签名上（支持驼峰和短横线式）
       const kebabComponentName = camelToKebab(this.componentName);
-      if (isOnTagName(document, position, this.componentName) || 
-          isOnTagName(document, position, kebabComponentName)) {
+      if (
+        isOnTagName(document, position, this.componentName) ||
+        isOnTagName(document, position, kebabComponentName)
+      ) {
         const markdown = new vscode.MarkdownString();
         markdown.isTrusted = true;
         markdown.supportHtml = true;
@@ -382,46 +438,58 @@ export abstract class ComponentHoverProvider implements vscode.HoverProvider {
 
       // 2. 检查是否在属性上（支持所有Vue写法）
       const attrInfo = getAttributeInfoAtPosition(document, position);
-      
+
       // 修复组件名称匹配逻辑
-      if (attrInfo && (attrInfo.tagName === this.componentName.replace('wd-', '') || 
-                      attrInfo.tagName === kebabComponentName || 
-                      attrInfo.tagName === kebabComponentName.replace('wd-', ''))) {
-        
+      if (
+        attrInfo &&
+        (attrInfo.tagName === this.componentName.replace("wd-", "") ||
+          attrInfo.tagName === kebabComponentName ||
+          attrInfo.tagName === kebabComponentName.replace("wd-", ""))
+      ) {
         // 处理通用属性
-        if (attrInfo.attrName === 'customClass') {
+        if (attrInfo.attrName === "customClass") {
           const markdown = new vscode.MarkdownString();
           markdown.isTrusted = true;
           markdown.supportHtml = true;
-          markdown.appendMarkdown('### 外部样式类\n\n');
-          markdown.appendMarkdown('`custom-class` 自定义样式类名，用于覆盖组件默认样式\n\n');
-          markdown.appendMarkdown('**类型**: string\n\n');
+          markdown.appendMarkdown("### 外部样式类\n\n");
+          markdown.appendMarkdown(
+            "`custom-class` 自定义样式类名，用于覆盖组件默认样式\n\n"
+          );
+          markdown.appendMarkdown("**类型**: string\n\n");
           return new vscode.Hover(markdown);
         }
-        
-        if (attrInfo.attrName === 'customStyle') {
+
+        if (attrInfo.attrName === "customStyle") {
           const markdown = new vscode.MarkdownString();
           markdown.isTrusted = true;
           markdown.supportHtml = true;
-          markdown.appendMarkdown('### 外部样式类\n\n');
-          markdown.appendMarkdown('`custom-style` 自定义样式，用于覆盖组件默认样式\n\n');
-          markdown.appendMarkdown('**类型**: string\n\n');
+          markdown.appendMarkdown("### 外部样式类\n\n");
+          markdown.appendMarkdown(
+            "`custom-style` 自定义样式，用于覆盖组件默认样式\n\n"
+          );
+          markdown.appendMarkdown("**类型**: string\n\n");
           return new vscode.Hover(markdown);
         }
 
         let prop, event;
-        
+
         // 同时匹配驼峰式和短横线式
-        const findProp = (name: string) => 
-          this.componentMeta.props.find((p: any) => 
-            p.name === name || camelToKebab(p.name) === name || kebabToCamel(p.name) === name
+        const findProp = (name: string) =>
+          this.componentMeta.props.find(
+            (p: any) =>
+              p.name === name ||
+              camelToKebab(p.name) === name ||
+              kebabToCamel(p.name) === name
           );
-        
-        const findEvent = (name: string) => 
-          this.componentMeta.events?.find((e: any) => 
-            e.name === name || camelToKebab(e.name) === name || kebabToCamel(e.name) === name
+
+        const findEvent = (name: string) =>
+          this.componentMeta.events?.find(
+            (e: any) =>
+              e.name === name ||
+              camelToKebab(e.name) === name ||
+              kebabToCamel(e.name) === name
           );
-          
+
         if (attrInfo.isEvent) {
           event = findEvent(attrInfo.attrName);
           if (!event) {
@@ -429,65 +497,77 @@ export abstract class ComponentHoverProvider implements vscode.HoverProvider {
             const kebabName = camelToKebab(attrInfo.attrName);
             event = findEvent(kebabName);
           }
-          
+
           if (!event) {
             // 尝试驼峰式匹配
             const camelName = kebabToCamel(attrInfo.attrName);
             event = findEvent(camelName);
           }
-          
+
           if (event) {
             const markdown = new vscode.MarkdownString();
             markdown.isTrusted = true;
             markdown.supportHtml = true;
-            
-            markdown.appendMarkdown(`### ${attrInfo.isDynamic ? '动态事件' : '事件'} \`${event.name}\`\n\n`);
+
+            markdown.appendMarkdown(
+              `### ${attrInfo.isDynamic ? "动态事件" : "事件"} \`${
+                event.name
+              }\`\n\n`
+            );
             markdown.appendMarkdown(`${event.description}\n\n`);
             markdown.appendMarkdown(`**类型**: 事件处理器\n\n`);
-            
+
             if (event.arguments) {
               markdown.appendMarkdown(`**事件参数**: \n`);
               event.arguments.forEach((arg: any) => {
-                markdown.appendMarkdown(`- \`${arg.name}\`: ${arg.type} - ${arg.description}\n`);
+                markdown.appendMarkdown(
+                  `- \`${arg.name}\`: ${arg.type} - ${arg.description}\n`
+                );
               });
-              markdown.appendMarkdown('\n');
+              markdown.appendMarkdown("\n");
             }
-            
+
             return new vscode.Hover(markdown);
           }
         } else {
           // 属性悬停
           prop = findProp(attrInfo.attrName);
-          
+
           if (!prop) {
             // 尝试短横线式匹配
             const kebabName = camelToKebab(attrInfo.attrName);
             prop = findProp(kebabName);
           }
-          
+
           if (!prop) {
             // 尝试驼峰式匹配
             const camelName = kebabToCamel(attrInfo.attrName);
             prop = findProp(camelName);
           }
-          
+
           if (prop) {
             const markdown = new vscode.MarkdownString();
             markdown.isTrusted = true;
             markdown.supportHtml = true;
-            
-            markdown.appendMarkdown(`### ${attrInfo.isDynamic ? '动态属性' : '属性'} \`${prop.name}\`\n\n`);
+
+            markdown.appendMarkdown(
+              `### ${attrInfo.isDynamic ? "动态属性" : "属性"} \`${
+                prop.name
+              }\`\n\n`
+            );
             markdown.appendMarkdown(`${prop.description}\n\n`);
             markdown.appendMarkdown(`**类型**: ${prop.type}\n\n`);
-            
+
             if (prop.values) {
-              markdown.appendMarkdown(`**可选值**: ${prop.values.join(', ')}\n\n`);
+              markdown.appendMarkdown(
+                `**可选值**: ${prop.values.join(", ")}\n\n`
+              );
             }
-            
+
             if (prop.default) {
               markdown.appendMarkdown(`**默认值**: ${prop.default}\n\n`);
             }
-            
+
             return new vscode.Hover(markdown);
           }
         }
@@ -495,7 +575,7 @@ export abstract class ComponentHoverProvider implements vscode.HoverProvider {
 
       return null;
     } catch (error) {
-      console.error('Error in provideHover:', error);
+      console.error("Error in provideHover:", error);
       return null;
     }
   }
@@ -511,17 +591,21 @@ export abstract class ComponentDiagnosticProvider {
   protected diagnosticCollection!: vscode.DiagnosticCollection;
 
   constructor() {
-    vscode.workspace.onDidChangeTextDocument(e => this.updateDiagnostics(e.document));
+    vscode.workspace.onDidChangeTextDocument((e) =>
+      this.updateDiagnostics(e.document)
+    );
   }
 
   protected initialize() {
     if (!this.diagnosticCollection) {
-      this.diagnosticCollection = vscode.languages.createDiagnosticCollection(this.componentName);
+      this.diagnosticCollection = vscode.languages.createDiagnosticCollection(
+        this.componentName
+      );
     }
   }
 
   public updateDiagnostics(document: vscode.TextDocument) {
-    if (document.languageId !== 'html' && document.languageId !== 'vue') return;
+    if (document.languageId !== "html" && document.languageId !== "vue") return;
 
     this.initialize();
 
@@ -539,7 +623,7 @@ export abstract class ComponentDiagnosticProvider {
       this.checkDuplicateAttributes(match[0], range, diagnostics);
       this.checkEventHandlers(match[0], range, diagnostics);
       this.checkBooleanAttributes(match[0], range, diagnostics);
-      
+
       // 调用额外的诊断方法
       if (this.getAdditionalDiagnostics) {
         this.getAdditionalDiagnostics(match[0], range, diagnostics);
@@ -551,61 +635,76 @@ export abstract class ComponentDiagnosticProvider {
 
   protected getTagRegex(): RegExp {
     const kebabComponentName = camelToKebab(this.componentName);
-    return new RegExp(`<(${this.componentName}|${kebabComponentName})\\s+[^>]*>`, 'g');
+    return new RegExp(
+      `<(${this.componentName}|${kebabComponentName})\\s+[^>]*>`,
+      "g"
+    );
   }
 
-  protected checkAttributeValues(tag: string, range: vscode.Range, diagnostics: vscode.Diagnostic[]) {
+  protected checkAttributeValues(
+    tag: string,
+    range: vscode.Range,
+    diagnostics: vscode.Diagnostic[]
+  ) {
     this.componentMeta.props
-      .filter((prop: any) => prop.type === 'enum')
+      .filter((prop: any) => prop.type === "enum")
       .forEach((prop: any) => {
         // 同时检查驼峰式和短横线式
         const propNames = [prop.name, camelToKebab(prop.name)];
-        
-        propNames.forEach(propName => {
+
+        propNames.forEach((propName) => {
           // 检查静态属性
-          const staticAttrMatch = tag.match(new RegExp(`${propName}=["']([^"']+)["']`));
+          const staticAttrMatch = tag.match(
+            new RegExp(`${propName}=["']([^"']+)["']`)
+          );
           if (staticAttrMatch && !prop.values.includes(staticAttrMatch[1])) {
             diagnostics.push({
               severity: vscode.DiagnosticSeverity.Error,
               range: range,
               message: `无效的 ${propName} 属性值: ${staticAttrMatch[1]}`,
-              source: 'wot-uni-helper'
+              source: "Wot UI IntelliSense",
             });
           }
-          
+
           // 检查动态属性值（需要静态值的情况）
-          const dynamicAttrMatch = tag.match(new RegExp(`:${propName}=["']([^"']+)["']`));
+          const dynamicAttrMatch = tag.match(
+            new RegExp(`:${propName}=["']([^"']+)["']`)
+          );
           if (dynamicAttrMatch && !prop.values.includes(dynamicAttrMatch[1])) {
             diagnostics.push({
               severity: vscode.DiagnosticSeverity.Warning,
               range: range,
               message: `动态属性 :${propName} 使用了静态值，建议使用变量`,
-              source: 'wot-uni-helper'
+              source: "Wot UI IntelliSense",
             });
           }
         });
       });
   }
 
-  protected checkDuplicateAttributes(tag: string, range: vscode.Range, diagnostics: vscode.Diagnostic[]) {
+  protected checkDuplicateAttributes(
+    tag: string,
+    range: vscode.Range,
+    diagnostics: vscode.Diagnostic[]
+  ) {
     const attrs = tag.match(/(?:v-bind:|v-on:|@|:)?([a-zA-Z0-9-_.]+)=?/g) || [];
     const attrMap = new Map<string, string>();
-    
-    attrs.forEach(attr => {
+
+    attrs.forEach((attr) => {
       const match = attr.match(/(?:v-bind:|v-on:|@|:)?([a-zA-Z0-9-_.]+)/);
       if (!match) return;
-      
+
       const rawName = match[1];
       // 标准化属性名（统一转为驼峰式）
       const normalizedName = kebabToCamel(rawName);
-      
+
       if (attrMap.has(normalizedName)) {
         const originalRawName = attrMap.get(normalizedName);
         diagnostics.push({
           severity: vscode.DiagnosticSeverity.Warning,
           range: range,
           message: `重复的属性: ${originalRawName} 和 ${rawName} 都映射到 ${normalizedName}`,
-          source: 'wot-uni-helper'
+          source: "Wot UI IntelliSense",
         });
       } else {
         attrMap.set(normalizedName, rawName);
@@ -613,15 +712,19 @@ export abstract class ComponentDiagnosticProvider {
     });
   }
 
-  protected checkEventHandlers(tag: string, range: vscode.Range, diagnostics: vscode.Diagnostic[]) {
+  protected checkEventHandlers(
+    tag: string,
+    range: vscode.Range,
+    diagnostics: vscode.Diagnostic[]
+  ) {
     this.componentMeta.events?.forEach((event: any) => {
       // 同时检查驼峰式和短横线式
       const eventNames = [event.name, camelToKebab(event.name)];
-      
-      eventNames.forEach(eventName => {
+
+      eventNames.forEach((eventName) => {
         const eventRegex = new RegExp(`(@|v-on:)${eventName}=["']([^"']*)["']`);
         const match = tag.match(eventRegex);
-        
+
         if (match) {
           const handler = match[2];
           // 简单检查处理器是否有效
@@ -630,14 +733,18 @@ export abstract class ComponentDiagnosticProvider {
               severity: vscode.DiagnosticSeverity.Error,
               range: range,
               message: `事件 ${eventName} 缺少处理器`,
-              source: 'wot-uni-helper'
+              source: "Wot UI IntelliSense",
             });
-          } else if (!handler.includes('(') && !handler.includes(')') && !handler.startsWith('$event')) {
+          } else if (
+            !handler.includes("(") &&
+            !handler.includes(")") &&
+            !handler.startsWith("$event")
+          ) {
             diagnostics.push({
               severity: vscode.DiagnosticSeverity.Warning,
               range: range,
               message: `事件处理器应包含括号: ${handler}()`,
-              source: 'wot-uni-helper'
+              source: "Wot UI IntelliSense",
             });
           }
         }
@@ -645,24 +752,30 @@ export abstract class ComponentDiagnosticProvider {
     });
   }
 
-  protected checkBooleanAttributes(tag: string, range: vscode.Range, diagnostics: vscode.Diagnostic[]) {
+  protected checkBooleanAttributes(
+    tag: string,
+    range: vscode.Range,
+    diagnostics: vscode.Diagnostic[]
+  ) {
     this.componentMeta.props
-      .filter((prop: any) => prop.type === 'boolean')
+      .filter((prop: any) => prop.type === "boolean")
       .forEach((prop: any) => {
         // 同时检查驼峰式和短横线式
         const propNames = [prop.name, camelToKebab(prop.name)];
-        
-        propNames.forEach(propName => {
+
+        propNames.forEach((propName) => {
           // 检查静态布尔属性是否有值
-          const staticAttrMatch = tag.match(new RegExp(`${propName}=["']([^"']*)["']`));
+          const staticAttrMatch = tag.match(
+            new RegExp(`${propName}=["']([^"']*)["']`)
+          );
           if (staticAttrMatch) {
             const value = staticAttrMatch[1];
-            if (value && value !== 'true' && value !== 'false') {
+            if (value && value !== "true" && value !== "false") {
               diagnostics.push({
                 severity: vscode.DiagnosticSeverity.Warning,
                 range: range,
                 message: `布尔属性 ${propName} 应使用简写或动态绑定`,
-                source: 'wot-uni-helper'
+                source: "Wot UI IntelliSense",
               });
             }
           }
@@ -670,5 +783,9 @@ export abstract class ComponentDiagnosticProvider {
       });
   }
 
-  protected abstract getAdditionalDiagnostics?(tag: string, range: vscode.Range, diagnostics: vscode.Diagnostic[]): void;
+  protected abstract getAdditionalDiagnostics?(
+    tag: string,
+    range: vscode.Range,
+    diagnostics: vscode.Diagnostic[]
+  ): void;
 }

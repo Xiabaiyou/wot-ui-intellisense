@@ -373,11 +373,6 @@ function processComponentProp(prop) {
             type = "enum";
         }
     }
-    // 特殊处理scope属性，它有明确的类型ButtonScope
-    if (prop[0] === "scope") {
-        type = "enum";
-        values = ["phoneNumber", "userInfo"];
-    }
     const result = [];
     // 处理复合属性名，如 'v-model / modelValue' 或 'modelValue / v-model' 等
     const propNames = prop[0].split('/').map(name => name.trim().replace(/`/g, ''));
@@ -401,39 +396,24 @@ function processComponentProp(prop) {
     // 如果包含v-model相关属性，确保三种形式都存在
     if (hasVModel) {
         const existingNames = new Set(normalizedNames);
-        // 确保 v-model 存在
-        if (!existingNames.has("v-model")) {
-            result.push({
-                name: "v-model",
-                type,
-                values,
-                description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
-                default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-                version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-            });
-        }
-        // 确保 model-value 存在
-        if (!existingNames.has("model-value")) {
-            result.push({
-                name: "model-value",
-                type,
-                values,
-                description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
-                default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-                version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-            });
-        }
-        // 确保 modelValue 存在
-        if (!existingNames.has("modelValue")) {
-            result.push({
-                name: "modelValue",
-                type,
-                values,
-                description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定`,
-                default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
-                version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
-            });
-        }
+        const vModelForms = [
+            { name: "v-model", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
+            { name: "model-value", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` },
+            { name: "modelValue", description: `${prop[1] || ""}\n\n> 该属性支持 \`v-model\` 双向绑定` }
+        ];
+        // 确保所有v-model形式都存在
+        vModelForms.forEach(form => {
+            if (!existingNames.has(form.name)) {
+                result.push({
+                    name: form.name,
+                    type,
+                    values,
+                    description: form.description,
+                    default: prop[4] && prop[4] !== "-" ? prop[4] : undefined,
+                    version: prop[5] && prop[5] !== "-" ? prop[5] : undefined,
+                });
+            }
+        });
     }
     return result;
 }
@@ -879,11 +859,11 @@ const vscode = __importStar(__webpack_require__(2));
 // ======================== 工具函数 ========================
 // 转义正则表达式特殊字符
 function escapeRegExp(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 // 驼峰式转短横线式
 function camelToKebab(str) {
-    return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+    return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, "$1-$2").toLowerCase();
 }
 // 短横线式转驼峰式
 function kebabToCamel(str) {
@@ -899,7 +879,7 @@ function isOnTagName(document, position, tagName) {
     // 1. 向左查找 '<'
     let tagStart = -1;
     for (let i = cursorOffset; i >= 0; i--) {
-        if (lineText[i] === '<') {
+        if (lineText[i] === "<") {
             tagStart = i;
             break;
         }
@@ -931,7 +911,7 @@ function getAttributeInfoAtPosition(document, position) {
         const txt = document.lineAt(line).text;
         const col = line === position.line ? position.character : txt.length - 1;
         for (let i = col; i >= 0; i--) {
-            if (txt[i] === '<') {
+            if (txt[i] === "<") {
                 openAngle = document.offsetAt(new vscode.Position(line, i));
                 break;
             }
@@ -947,7 +927,7 @@ function getAttributeInfoAtPosition(document, position) {
         const txt = document.lineAt(line).text;
         const startCol = line === position.line ? position.character : 0;
         for (let i = startCol; i < txt.length; i++) {
-            if (txt[i] === '>') {
+            if (txt[i] === ">") {
                 closeAngle = document.offsetAt(new vscode.Position(line, i)) + 1;
                 break;
             }
@@ -980,8 +960,8 @@ function getAttributeInfoAtPosition(document, position) {
             return {
                 attrName, // 保持原始格式用于匹配
                 tagName,
-                isEvent: fullMatch.startsWith('@') || fullMatch.startsWith('v-on:'),
-                isDynamic: fullMatch.startsWith(':') || fullMatch.startsWith('v-bind:'),
+                isEvent: fullMatch.startsWith("@") || fullMatch.startsWith("v-on:"),
+                isDynamic: fullMatch.startsWith(":") || fullMatch.startsWith("v-bind:"),
             };
         }
     }
@@ -993,28 +973,31 @@ function getAttributeInfoAtPosition(document, position) {
  */
 class ComponentCompletionProvider {
     provideCompletionItems(document, position) {
-        const linePrefix = document.lineAt(position).text.substring(0, position.character);
+        const linePrefix = document
+            .lineAt(position)
+            .text.substring(0, position.character);
         // 1. 组件标签补全（支持驼峰和短横线式）
         const kebabComponentName = camelToKebab(this.componentName);
-        const tagRegex = new RegExp(`<(${this.componentName.replace(/-/g, '(-)?')}|${kebabComponentName}(\\s+[^>]*)?)?$`);
-        if (linePrefix.match(tagRegex)) {
+        const tagRegex = new RegExp(`<(${this.componentName.replace(/-/g, "(-)?")}|${kebabComponentName}(\\s+[^>]*)?)?$`);
+        const matchResult = linePrefix.match(tagRegex);
+        if (matchResult) {
             // 创建两种形式的标签补全
             const items = [];
-            // 驼峰式标签
-            // const camelItem = new vscode.CompletionItem(
-            //   this.componentName,
-            //   vscode.CompletionItemKind.Class
-            // );
-            // camelItem.documentation = new vscode.MarkdownString(this.componentMeta.documentation);
-            // camelItem.insertText = this.getTagSnippet(false);
-            // camelItem.detail = "wot uni 组件 - 驼峰式标签";
-            // items.push(camelItem);
             // 短横线式标签
-            const kebabItem = new vscode.CompletionItem(kebabComponentName, vscode.CompletionItemKind.Class);
+            const kebabItem = new vscode.CompletionItem(kebabComponentName, // 添加测试前缀使其更明显
+            vscode.CompletionItemKind.Class);
             kebabItem.documentation = new vscode.MarkdownString(this.componentMeta.documentation);
-            kebabItem.insertText = this.getTagSnippet(true);
-            kebabItem.detail = "wot uni 组件";
+            kebabItem.label = {
+                label: kebabComponentName,
+                description: 'Wot UI IntelliSense'
+            },
+                kebabItem.insertText = this.getTagSnippet(true);
+            kebabItem.sortText = '0';
+            kebabItem.preselect = true;
+            kebabItem.kind = vscode.CompletionItemKind.Snippet;
+            kebabItem.command = { command: 'editor.action.triggerSuggest', title: '' };
             items.push(kebabItem);
+            /* 🔑 强制展开详情面板 → 第一次 Ctrl+Space 就能看到 detail */
             return items;
         }
         // 2. 属性补全（增强支持所有Vue写法）
@@ -1098,10 +1081,10 @@ class ComponentCompletionProvider {
         const item = new vscode.CompletionItem(propName, vscode.CompletionItemKind.Property);
         item.documentation = prop.description;
         item.detail = isKebabCase ? "短横线式属性" : "驼峰式属性";
-        if (prop.type === 'enum') {
-            item.insertText = new vscode.SnippetString(`${propName}="\${1|${prop.values.join(',')}|}"`);
+        if (prop.type === "enum") {
+            item.insertText = new vscode.SnippetString(`${propName}="\${1|${prop.values.join(",")}|}"`);
         }
-        else if (prop.type === 'boolean') {
+        else if (prop.type === "boolean") {
             // 布尔属性支持简写（仅驼峰式）
             if (!isKebabCase) {
                 const booleanItem = new vscode.CompletionItem(prop.name, vscode.CompletionItemKind.Property);
@@ -1120,9 +1103,9 @@ class ComponentCompletionProvider {
     // 创建动态属性补全项
     createDynamicPropItem(prop, isKebabCase) {
         const propName = isKebabCase ? camelToKebab(prop.name) : prop.name;
-        const prefix = ':';
+        const prefix = ":";
         const item = new vscode.CompletionItem(`${prefix}${propName}`, vscode.CompletionItemKind.Property);
-        item.documentation = new vscode.MarkdownString(`**动态绑定** (${isKebabCase ? '短横线式' : '驼峰式'})\n\n${prop.description}\n\n类型: ${prop.type}`);
+        item.documentation = new vscode.MarkdownString(`**动态绑定** (${isKebabCase ? "短横线式" : "驼峰式"})\n\n${prop.description}\n\n类型: ${prop.type}`);
         item.insertText = new vscode.SnippetString(`${prefix}${propName}="\${1:value}"`);
         item.detail = isKebabCase ? "短横线式动态属性" : "驼峰式动态属性";
         return item;
@@ -1130,9 +1113,9 @@ class ComponentCompletionProvider {
     // 创建事件补全项
     createEventItem(event, isKebabCase) {
         const eventName = isKebabCase ? camelToKebab(event.name) : event.name;
-        const prefix = '@';
+        const prefix = "@";
         const item = new vscode.CompletionItem(`${prefix}${eventName}`, vscode.CompletionItemKind.Event);
-        item.documentation = new vscode.MarkdownString(`**事件** (${isKebabCase ? '短横线式' : '驼峰式'})\n\n${event.description}`);
+        item.documentation = new vscode.MarkdownString(`**事件** (${isKebabCase ? "短横线式" : "驼峰式"})\n\n${event.description}`);
         item.insertText = new vscode.SnippetString(`${prefix}${eventName}="\${1:handler}"`);
         item.detail = isKebabCase ? "短横线式事件" : "驼峰式事件";
         return item;
@@ -1159,32 +1142,37 @@ class ComponentHoverProvider {
             // 2. 检查是否在属性上（支持所有Vue写法）
             const attrInfo = getAttributeInfoAtPosition(document, position);
             // 修复组件名称匹配逻辑
-            if (attrInfo && (attrInfo.tagName === this.componentName.replace('wd-', '') ||
-                attrInfo.tagName === kebabComponentName ||
-                attrInfo.tagName === kebabComponentName.replace('wd-', ''))) {
+            if (attrInfo &&
+                (attrInfo.tagName === this.componentName.replace("wd-", "") ||
+                    attrInfo.tagName === kebabComponentName ||
+                    attrInfo.tagName === kebabComponentName.replace("wd-", ""))) {
                 // 处理通用属性
-                if (attrInfo.attrName === 'customClass') {
+                if (attrInfo.attrName === "customClass") {
                     const markdown = new vscode.MarkdownString();
                     markdown.isTrusted = true;
                     markdown.supportHtml = true;
-                    markdown.appendMarkdown('### 外部样式类\n\n');
-                    markdown.appendMarkdown('`custom-class` 自定义样式类名，用于覆盖组件默认样式\n\n');
-                    markdown.appendMarkdown('**类型**: string\n\n');
+                    markdown.appendMarkdown("### 外部样式类\n\n");
+                    markdown.appendMarkdown("`custom-class` 自定义样式类名，用于覆盖组件默认样式\n\n");
+                    markdown.appendMarkdown("**类型**: string\n\n");
                     return new vscode.Hover(markdown);
                 }
-                if (attrInfo.attrName === 'customStyle') {
+                if (attrInfo.attrName === "customStyle") {
                     const markdown = new vscode.MarkdownString();
                     markdown.isTrusted = true;
                     markdown.supportHtml = true;
-                    markdown.appendMarkdown('### 外部样式类\n\n');
-                    markdown.appendMarkdown('`custom-style` 自定义样式，用于覆盖组件默认样式\n\n');
-                    markdown.appendMarkdown('**类型**: string\n\n');
+                    markdown.appendMarkdown("### 外部样式类\n\n");
+                    markdown.appendMarkdown("`custom-style` 自定义样式，用于覆盖组件默认样式\n\n");
+                    markdown.appendMarkdown("**类型**: string\n\n");
                     return new vscode.Hover(markdown);
                 }
                 let prop, event;
                 // 同时匹配驼峰式和短横线式
-                const findProp = (name) => this.componentMeta.props.find((p) => p.name === name || camelToKebab(p.name) === name || kebabToCamel(p.name) === name);
-                const findEvent = (name) => this.componentMeta.events?.find((e) => e.name === name || camelToKebab(e.name) === name || kebabToCamel(e.name) === name);
+                const findProp = (name) => this.componentMeta.props.find((p) => p.name === name ||
+                    camelToKebab(p.name) === name ||
+                    kebabToCamel(p.name) === name);
+                const findEvent = (name) => this.componentMeta.events?.find((e) => e.name === name ||
+                    camelToKebab(e.name) === name ||
+                    kebabToCamel(e.name) === name);
                 if (attrInfo.isEvent) {
                     event = findEvent(attrInfo.attrName);
                     if (!event) {
@@ -1201,7 +1189,7 @@ class ComponentHoverProvider {
                         const markdown = new vscode.MarkdownString();
                         markdown.isTrusted = true;
                         markdown.supportHtml = true;
-                        markdown.appendMarkdown(`### ${attrInfo.isDynamic ? '动态事件' : '事件'} \`${event.name}\`\n\n`);
+                        markdown.appendMarkdown(`### ${attrInfo.isDynamic ? "动态事件" : "事件"} \`${event.name}\`\n\n`);
                         markdown.appendMarkdown(`${event.description}\n\n`);
                         markdown.appendMarkdown(`**类型**: 事件处理器\n\n`);
                         if (event.arguments) {
@@ -1209,7 +1197,7 @@ class ComponentHoverProvider {
                             event.arguments.forEach((arg) => {
                                 markdown.appendMarkdown(`- \`${arg.name}\`: ${arg.type} - ${arg.description}\n`);
                             });
-                            markdown.appendMarkdown('\n');
+                            markdown.appendMarkdown("\n");
                         }
                         return new vscode.Hover(markdown);
                     }
@@ -1231,11 +1219,11 @@ class ComponentHoverProvider {
                         const markdown = new vscode.MarkdownString();
                         markdown.isTrusted = true;
                         markdown.supportHtml = true;
-                        markdown.appendMarkdown(`### ${attrInfo.isDynamic ? '动态属性' : '属性'} \`${prop.name}\`\n\n`);
+                        markdown.appendMarkdown(`### ${attrInfo.isDynamic ? "动态属性" : "属性"} \`${prop.name}\`\n\n`);
                         markdown.appendMarkdown(`${prop.description}\n\n`);
                         markdown.appendMarkdown(`**类型**: ${prop.type}\n\n`);
                         if (prop.values) {
-                            markdown.appendMarkdown(`**可选值**: ${prop.values.join(', ')}\n\n`);
+                            markdown.appendMarkdown(`**可选值**: ${prop.values.join(", ")}\n\n`);
                         }
                         if (prop.default) {
                             markdown.appendMarkdown(`**默认值**: ${prop.default}\n\n`);
@@ -1247,7 +1235,7 @@ class ComponentHoverProvider {
             return null;
         }
         catch (error) {
-            console.error('Error in provideHover:', error);
+            console.error("Error in provideHover:", error);
             return null;
         }
     }
@@ -1260,7 +1248,7 @@ exports.ComponentHoverProvider = ComponentHoverProvider;
 class ComponentDiagnosticProvider {
     diagnosticCollection;
     constructor() {
-        vscode.workspace.onDidChangeTextDocument(e => this.updateDiagnostics(e.document));
+        vscode.workspace.onDidChangeTextDocument((e) => this.updateDiagnostics(e.document));
     }
     initialize() {
         if (!this.diagnosticCollection) {
@@ -1268,7 +1256,7 @@ class ComponentDiagnosticProvider {
         }
     }
     updateDiagnostics(document) {
-        if (document.languageId !== 'html' && document.languageId !== 'vue')
+        if (document.languageId !== "html" && document.languageId !== "vue")
             return;
         this.initialize();
         const diagnostics = [];
@@ -1292,15 +1280,15 @@ class ComponentDiagnosticProvider {
     }
     getTagRegex() {
         const kebabComponentName = camelToKebab(this.componentName);
-        return new RegExp(`<(${this.componentName}|${kebabComponentName})\\s+[^>]*>`, 'g');
+        return new RegExp(`<(${this.componentName}|${kebabComponentName})\\s+[^>]*>`, "g");
     }
     checkAttributeValues(tag, range, diagnostics) {
         this.componentMeta.props
-            .filter((prop) => prop.type === 'enum')
+            .filter((prop) => prop.type === "enum")
             .forEach((prop) => {
             // 同时检查驼峰式和短横线式
             const propNames = [prop.name, camelToKebab(prop.name)];
-            propNames.forEach(propName => {
+            propNames.forEach((propName) => {
                 // 检查静态属性
                 const staticAttrMatch = tag.match(new RegExp(`${propName}=["']([^"']+)["']`));
                 if (staticAttrMatch && !prop.values.includes(staticAttrMatch[1])) {
@@ -1308,7 +1296,7 @@ class ComponentDiagnosticProvider {
                         severity: vscode.DiagnosticSeverity.Error,
                         range: range,
                         message: `无效的 ${propName} 属性值: ${staticAttrMatch[1]}`,
-                        source: 'wot-uni-helper'
+                        source: "Wot UI IntelliSense",
                     });
                 }
                 // 检查动态属性值（需要静态值的情况）
@@ -1318,7 +1306,7 @@ class ComponentDiagnosticProvider {
                         severity: vscode.DiagnosticSeverity.Warning,
                         range: range,
                         message: `动态属性 :${propName} 使用了静态值，建议使用变量`,
-                        source: 'wot-uni-helper'
+                        source: "Wot UI IntelliSense",
                     });
                 }
             });
@@ -1327,7 +1315,7 @@ class ComponentDiagnosticProvider {
     checkDuplicateAttributes(tag, range, diagnostics) {
         const attrs = tag.match(/(?:v-bind:|v-on:|@|:)?([a-zA-Z0-9-_.]+)=?/g) || [];
         const attrMap = new Map();
-        attrs.forEach(attr => {
+        attrs.forEach((attr) => {
             const match = attr.match(/(?:v-bind:|v-on:|@|:)?([a-zA-Z0-9-_.]+)/);
             if (!match)
                 return;
@@ -1340,7 +1328,7 @@ class ComponentDiagnosticProvider {
                     severity: vscode.DiagnosticSeverity.Warning,
                     range: range,
                     message: `重复的属性: ${originalRawName} 和 ${rawName} 都映射到 ${normalizedName}`,
-                    source: 'wot-uni-helper'
+                    source: "Wot UI IntelliSense",
                 });
             }
             else {
@@ -1352,7 +1340,7 @@ class ComponentDiagnosticProvider {
         this.componentMeta.events?.forEach((event) => {
             // 同时检查驼峰式和短横线式
             const eventNames = [event.name, camelToKebab(event.name)];
-            eventNames.forEach(eventName => {
+            eventNames.forEach((eventName) => {
                 const eventRegex = new RegExp(`(@|v-on:)${eventName}=["']([^"']*)["']`);
                 const match = tag.match(eventRegex);
                 if (match) {
@@ -1363,15 +1351,17 @@ class ComponentDiagnosticProvider {
                             severity: vscode.DiagnosticSeverity.Error,
                             range: range,
                             message: `事件 ${eventName} 缺少处理器`,
-                            source: 'wot-uni-helper'
+                            source: "Wot UI IntelliSense",
                         });
                     }
-                    else if (!handler.includes('(') && !handler.includes(')') && !handler.startsWith('$event')) {
+                    else if (!handler.includes("(") &&
+                        !handler.includes(")") &&
+                        !handler.startsWith("$event")) {
                         diagnostics.push({
                             severity: vscode.DiagnosticSeverity.Warning,
                             range: range,
                             message: `事件处理器应包含括号: ${handler}()`,
-                            source: 'wot-uni-helper'
+                            source: "Wot UI IntelliSense",
                         });
                     }
                 }
@@ -1380,21 +1370,21 @@ class ComponentDiagnosticProvider {
     }
     checkBooleanAttributes(tag, range, diagnostics) {
         this.componentMeta.props
-            .filter((prop) => prop.type === 'boolean')
+            .filter((prop) => prop.type === "boolean")
             .forEach((prop) => {
             // 同时检查驼峰式和短横线式
             const propNames = [prop.name, camelToKebab(prop.name)];
-            propNames.forEach(propName => {
+            propNames.forEach((propName) => {
                 // 检查静态布尔属性是否有值
                 const staticAttrMatch = tag.match(new RegExp(`${propName}=["']([^"']*)["']`));
                 if (staticAttrMatch) {
                     const value = staticAttrMatch[1];
-                    if (value && value !== 'true' && value !== 'false') {
+                    if (value && value !== "true" && value !== "false") {
                         diagnostics.push({
                             severity: vscode.DiagnosticSeverity.Warning,
                             range: range,
                             message: `布尔属性 ${propName} 应使用简写或动态绑定`,
-                            source: 'wot-uni-helper'
+                            source: "Wot UI IntelliSense",
                         });
                     }
                 }
@@ -1442,11 +1432,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.activate = activate;
 exports.deactivate = deactivate;
 const index_1 = __webpack_require__(1);
-function activate(context) {
-    console.log('Wot Uni Helper 已激活');
-    (0, index_1.registerAll)(context);
+async function activate(context) {
+    console.log('🚀 Wot UI IntelliSense 插件已激活!');
+    console.log('正在注册组件...');
+    await (0, index_1.registerAll)(context);
+    console.log('✅ Wot UI IntelliSense 插件注册完成!');
 }
-function deactivate() { }
+async function deactivate() {
+    console.log('🚫 Wot UI IntelliSense 插件已停用!');
+}
 
 })();
 

@@ -1,9 +1,10 @@
-# Change Log
+# 更新说明
 
-All notable changes to the "wot-uni-helper" extension will be documented in this file.
+## 0.0.1
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+- 实现了对 Wot UI 组件库的智能提示支持
+- 支持 80+ 个 Wot UI 组件的代码补全功能
+- 提供组件标签、属性、事件的智能补全
+- 短横线式(kebab-case)组件提示
+- 实现悬停文档提示功能，显示组件和属性的详细说明
+- 支持 Vue 和 HTML 文件中的智能提示
